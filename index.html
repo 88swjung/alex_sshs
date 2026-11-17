@@ -4,9 +4,41 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>찐알렉스 피하기</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Three.js 를 CDN 에서 불러옴 (버전 고정) -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js"
+      }
+    }
+  </script>
 </head>
 <body>
-  <h1>찐알렉스 피하기</h1>
-  <p>준비 중</p>
+  <canvas id="game"></canvas>
+
+  <!-- 조준점 -->
+  <div id="crosshair"></div>
+
+  <!-- 왼쪽 아래: 이동 상태 / 오른쪽 아래: 좌표와 현재 방 -->
+  <div id="hud-move" data-mode="walk">걷기</div>
+  <div id="hud-pos"></div>
+
+  <!-- 시작 화면 (포인터가 풀리면 다시 나타남) -->
+  <div id="overlay">
+    <div class="panel">
+      <h1>찐알렉스 피하기</h1>
+      <p id="overlay-msg" class="start">화면을 클릭하면 시작해요</p>
+      <ul class="controls">
+        <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>이동</span></li>
+        <li><kbd>마우스</kbd><span>시점 돌리기</span></li>
+        <li><kbd>Shift</kbd><span>누르고 있는 동안 달리기</span></li>
+        <li><kbd>오른쪽 버튼</kbd><span>누르고 있는 동안 조용히 걷기</span></li>
+        <li><kbd>ESC</kbd><span>일시정지 (마우스 풀기)</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

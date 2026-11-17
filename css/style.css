@@ -1,0 +1,122 @@
+/* 찐알렉스 피하기 — 화면 스타일 */
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  user-select: none;
+}
+
+/* 3D 화면 */
+#game {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 조준점: 화면 가운데 작은 점 */
+#crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+/* HUD 공통 */
+#hud-move,
+#hud-pos {
+  position: fixed;
+  bottom: 16px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  pointer-events: none;
+}
+
+#hud-move {
+  left: 16px;
+  font-size: 18px;
+  font-weight: bold;
+}
+#hud-move[data-mode="quiet"] { color: #9fd3ff; }
+#hud-move[data-mode="run"]   { color: #ffd28a; }
+
+#hud-pos {
+  right: 16px;
+  font-size: 12px;
+  font-family: Consolas, "Courier New", monospace;
+  opacity: 0.85;
+}
+
+/* 시작 화면 */
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 20, 35, 0.72);
+  cursor: pointer;
+}
+#overlay.hidden { display: none; }
+
+#overlay .panel {
+  text-align: center;
+  color: #fff;
+  padding: 32px 44px;
+  border-radius: 14px;
+  background: rgba(20, 40, 70, 0.85);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+#overlay h1 {
+  margin: 0 0 8px;
+  font-size: 44px;
+  letter-spacing: 2px;
+}
+
+#overlay .start {
+  margin: 0 0 24px;
+  font-size: 20px;
+  color: #ffe08a;
+}
+
+.controls {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  font-size: 16px;
+}
+.controls li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0;
+}
+.controls li span { margin-left: 10px; color: #dbe6f3; }
+
+kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  background: #eef2f7;
+  color: #1b2a3d;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: bold;
+  text-align: center;
+  box-shadow: 0 2px 0 #9aa8ba;
+}
