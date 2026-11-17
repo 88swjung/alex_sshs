@@ -55,7 +55,19 @@ function isBlocked(B, face, p0, p1, depth = 0.5) {
 
 // ------------------------------------------------------------
 // 창문 — 건물 바깥에 면한 벽에 자동으로 놓임
+//   · 십자 창살 없는 통유리 한 장 + 얇은 알루미늄 테두리와 창턱
+//   · 커튼은 기본으로 없음. 방(room)에 curtains: ['N', ...] 를 적으면 그 쪽 벽 창문에만
+//     검은 커튼이 달림 (빛이 들어오도록 창 양옆으로 걷어 둔 모습)
+//   · 창문마다 바닥에 햇빛 얼룩 + 창에서 바닥까지 비스듬히 내리는 옅은 빛줄기
 // ------------------------------------------------------------
+/** 이 면이 방의 어느 쪽 벽인지 ('N' | 'S' | 'E' | 'W') */
+function wallLetter(face) {
+  if (face.horizontal) return face.side > 0 ? 'N' : 'S';
+  return face.side > 0 ? 'W' : 'E';
+}
+
+const SUN_SLOPE = 0.6; // 햇빛이 수평으로 1m 갈 때 내려오는 높이(m)
+
 export function addWindows(B, faces) {
   const windowed = new Set();
   let counter = 0;
@@ -65,10 +77,12 @@ export function addWindows(B, faces) {
     if (face.room.stairs) continue;         // 계단 끝은 벽으로 막혀 있어서 창문을 달아도 안 보임
     const lo = face.s + 0.55, hi = face.e - 0.55;
     if (hi - lo < 1.9) continue;
-    const n = Math.max(1, Math.floor((hi - lo) / 2.7));
+    const n = Math.max(1, Math.floor((hi - lo) / 2.9));
     const spacing = (hi - lo) / n;
-    const W = Math.min(1.5, spacing - 0.7);
+    const W = Math.min(2.2, spacing - 0.8);
     const frosted = face.room.kind === 'restroom';
+    const curtained = !frosted && (face.room.curtains || []).includes(wallLetter(face));
+    const depthAvailable = (face.horizontal ? face.room.d : face.room.w) - 0.4; // 맞은편 벽까지 거리
 
     for (let i = 0; i < n; i++) {
       const p = lo + (i + 0.5) * spacing;
@@ -76,32 +90,52 @@ export function addWindows(B, faces) {
       windowed.add(face);
       counter++;
 
-      const y0 = frosted ? 1.6 : 0.95, Hh = frosted ? 0.7 : 1.3;
-      // 유리: 위쪽은 하늘색, 아래쪽은 옅은 색 (스스로 빛남)
-      wallBox(B, face, p, y0, W, Hh * 0.55, 0, 0.02, frosted ? COLORS.windowSkyLow : COLORS.windowSkyLow, true);
-      wallBox(B, face, p, y0 + Hh * 0.55, W, Hh * 0.45, 0, 0.02, frosted ? COLORS.windowSkyLow : COLORS.windowSky, true);
-      // 창틀·가운데 살
-      const fr = COLORS.windowFrame;
-      wallBox(B, face, p, y0 - 0.04, W + 0.1, 0.05, 0, 0.05, fr);              // 아래
-      wallBox(B, face, p, y0 + Hh - 0.01, W + 0.1, 0.05, 0, 0.05, fr);         // 위
-      wallBox(B, face, p - W / 2 - 0.025, y0, 0.05, Hh, 0, 0.05, fr);          // 왼쪽
-      wallBox(B, face, p + W / 2 + 0.025, y0, 0.05, Hh, 0, 0.05, fr);          // 오른쪽
-      wallBox(B, face, p, y0, 0.04, Hh, 0, 0.04, fr);                           // 세로 살
-      wallBox(B, face, p, y0 + Hh * 0.55, W, 0.04, 0, 0.04, fr);                // 가로 살
-      wallBox(B, face, p, y0 - 0.09, W + 0.24, 0.05, 0, 0.13, fr);              // 창턱
-      // 커튼 (화장실 제외)
-      if (!frosted) {
-        const cc = COLORS.curtain[Math.floor(hash(`${face.room.id}-${counter}`) * COLORS.curtain.length)];
-        for (const s of [-1, 1]) {
-          wallBox(B, face, p + s * (W / 2 + 0.22), y0 - 0.15, 0.34, Hh + 0.55, 0.03, 0.08, cc);
-          wallBox(B, face, p + s * (W / 2 + 0.22), y0 - 0.15, 0.04, Hh + 0.55, 0.0, 0.04, scaled(cc, 0.8)); // 주름 한 줄
-        }
-        wallBox(B, face, p, y0 + Hh + 0.32, W + 0.9, 0.04, 0.02, 0.05, COLORS.metal); // 커튼 봉
+      const y0 = frosted ? 1.6 : 0.9, Hh = frosted ? 0.7 : 1.5;
+      // 유리: 아래는 옅고 위는 하늘색인 띠 4개 (스스로 빛남). 색이 비슷해서 이음매는 안 보임
+      const bands = COLORS.windowGlass.length;
+      for (let k = 0; k < bands; k++) {
+        wallBox(B, face, p, y0 + (Hh * k) / bands, W, Hh / bands + (k < bands - 1 ? 0.002 : 0), 0, 0.02,
+          frosted ? COLORS.windowGlassFrosted : COLORS.windowGlass[k], true);
       }
-      // 바닥에 비치는 햇빛 얼룩
-      const [gx, gz] = facePoint(B, face, p, 1.5);
-      const sw = W + 0.4, sd = 2.4;
-      B.glowDecal.add(gx, gz, face.horizontal ? sw : sd, face.horizontal ? sd : sw, scaled(COLORS.sunGlow, 0.3));
+      // 얇은 알루미늄 테두리 + 창턱 (가운데 창살 없음)
+      const fr = COLORS.windowFrame;
+      wallBox(B, face, p, y0 - 0.04, W + 0.08, 0.04, 0, 0.045, fr);              // 아래
+      wallBox(B, face, p, y0 + Hh, W + 0.08, 0.04, 0, 0.045, fr);                // 위
+      wallBox(B, face, p - W / 2 - 0.02, y0, 0.04, Hh, 0, 0.045, fr);            // 왼쪽
+      wallBox(B, face, p + W / 2 + 0.02, y0, 0.04, Hh, 0, 0.045, fr);            // 오른쪽
+      wallBox(B, face, p, y0 - 0.09, W + 0.2, 0.05, 0, 0.12, fr);                // 창턱
+
+      // 검은 커튼: 그림에 표시된 방의 창문에만. 창 양옆으로 걷어 모아 둔 주름 3겹 + 커튼 봉
+      if (curtained) {
+        const blk = COLORS.curtainBlack;
+        for (const s of [-1, 1]) {
+          for (let j = 0; j < 3; j++) {
+            wallBox(B, face, p + s * (W / 2 + 0.12 + j * 0.115), 0.32, 0.12, 2.3, j % 2 ? 0.075 : 0.025, 0.05, blk[(j + (s > 0 ? 1 : 0)) % blk.length]);
+          }
+        }
+        wallBox(B, face, p, 2.62, W + 1.0, 0.04, 0.02, 0.04, COLORS.metal);       // 커튼 봉
+      }
+
+      // 햇빛: 바닥 얼룩(창 모양 그대로) + 창에서 바닥으로 내려오는 옅은 빛줄기
+      const top = y0 + Hh;
+      const k = Math.max(SUN_SLOPE, top / Math.max(2, depthAvailable));
+      const d0 = y0 / k, d1 = top / k; // 바닥 얼룩이 시작하고 끝나는, 벽에서의 거리
+      const strength = frosted ? 0.2 : 0.36;
+      const [gx, gz] = facePoint(B, face, p, (d0 + d1) / 2);
+      B.sunDecal.add(gx, gz, W, d1 - d0, // (판의 가로 = 창 폭, 세로 = 벽에서 멀어지는 길이. 회전은 아래 값이 맞춰 줌)
+        scaled(COLORS.sunGlow, strength), face.horizontal ? (face.side > 0 ? 0 : Math.PI) : (face.side > 0 ? Math.PI / 2 : -Math.PI / 2));
+
+      // 빛줄기 (정점마다 투명도를 달리해서 창 쪽이 진하고 바닥 쪽이 옅음)
+      const along = (pp, off) => facePoint(B, face, pp, off);
+      const wl = p - W / 2, wr = p + W / 2;
+      const win = (pp, yy) => { const [x, z] = along(pp, 0.03); return [x, yy, z]; };
+      const flo = (pp, dd) => { const [x, z] = along(pp, dd); return [x, 0.01, z]; };
+      const aNear = frosted ? 0.04 : 0.075, aFar = 0.0;
+      const q = (a, b, c, d, aa, ab, ac, ad) => B.shafts.push([a, aa], [b, ab], [c, ac], [d, ad]);
+      q(win(wl, y0), win(wr, y0), flo(wr, d0), flo(wl, d0), aNear, aNear, aFar, aFar);           // 아래 면
+      q(win(wl, top), win(wr, top), flo(wr, d1), flo(wl, d1), aNear, aNear, aFar, aFar);         // 위 면
+      q(win(wl, y0), win(wl, top), flo(wl, d1), flo(wl, d0), aNear, aNear, aFar, aFar);          // 왼쪽 면
+      q(win(wr, y0), win(wr, top), flo(wr, d1), flo(wr, d0), aNear, aNear, aFar, aFar);          // 오른쪽 면
     }
   }
   return windowed;
@@ -116,6 +150,7 @@ const WALL_DECOR = {
   classroom: ['corkboard', 'poster'],
   study: ['poster', 'corkboard'],
   office: ['corkboard', 'poster'],
+  lab: ['poster', 'corkboard'],
   stairs: ['poster'],
 };
 const DECOR_WIDTH = { corkboard: 1.7, poster: 0.7, extinguisher: 0.4 };

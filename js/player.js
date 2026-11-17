@@ -25,6 +25,7 @@ export class Player {
     this.z = 0;
     this.yaw = 0;
     this.pitch = 0;
+    this.groundY = 0;         // 지금 서 있는 곳의 바닥 높이 (단상·계단 위에서만 0이 아님)
 
     // 화면 연출용 값
     this.bobPhase = 0;
@@ -42,6 +43,7 @@ export class Player {
     this.z = sp.z;
     this.yaw = sp.yaw;
     this.pitch = 0;
+    this.groundY = this.world.groundAt ? this.world.groundAt(this.x, this.z) : 0;
     this.applyCamera();
   }
 
@@ -96,8 +98,19 @@ export class Player {
   update(dt) {
     const px = this.x, pz = this.z;
     if (this.enabled) this.move(dt);
+    this.updateGround(dt);
     this.updateViewEffects(dt, dt > 0 ? Math.hypot(this.x - px, this.z - pz) / dt : 0);
     this.applyCamera();
+  }
+
+  /** 계단·단상을 오르내릴 때 눈높이가 부드럽게 따라가게 함 (이동·충돌은 평면 그대로) */
+  updateGround(dt) {
+    const target = this.world.groundAt ? this.world.groundAt(this.x, this.z) : 0;
+    if (Math.abs(target - this.groundY) < 0.001) {
+      this.groundY = target;
+      return;
+    }
+    this.groundY += (target - this.groundY) * (1 - Math.exp(-14 * dt));
   }
 
   /**
@@ -197,7 +210,7 @@ export class Player {
   applyCamera() {
     // 흔들림은 카메라에만 더함 (this.x, this.z 같은 실제 위치는 그대로)
     const cos = Math.cos(this.yaw), sin = Math.sin(this.yaw);
-    this.camera.position.set(this.x + cos * this.bobX, CONFIG.eyeHeight + this.bobY, this.z - sin * this.bobX);
+    this.camera.position.set(this.x + cos * this.bobX, CONFIG.eyeHeight + this.groundY + this.bobY, this.z - sin * this.bobX);
     this.camera.rotation.set(this.pitch, this.yaw, 0);
   }
 }

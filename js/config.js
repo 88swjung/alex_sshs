@@ -100,11 +100,28 @@ export const COLORS = {
   extinguisher: 0xc8352b,
   books: [0x8a4b45, 0x3f5f7f, 0xb09a5a, 0x5a7a5f, 0x555a66, 0x7b6a4d],
 
-  windowFrame: 0xb7bcc1, // 알루미늄 창틀
-  windowSky: 0xb7cde2,   // 흐린 낮 하늘
-  windowSkyLow: 0xdde7ef,
-  curtain: [0xcbc5b8, 0xbcc1c4],
-  sunGlow: 0xf2ebd8,
+  windowFrame: 0xb7bcc1, // 알루미늄 창틀 (통유리 가장자리)
+  // 통유리 색: 위(하늘)에서 아래로 갈수록 옅어지는 띠 (십자 창살 없이 이음매가 안 보이게 비슷한 색)
+  windowGlass: [0xe6eef6, 0xdbe7f2, 0xcfdeed, 0xc3d6e9],
+  windowGlassFrosted: 0xe3eaee, // 화장실 불투명 유리
+  curtainBlack: [0x181a1e, 0x202328, 0x131518], // 검은 커튼 (주름마다 조금씩 다른 검정)
+  sunGlow: 0xfff0cf,     // 창으로 들어오는 햇빛 (바닥 빛 얼룩)
+
+  labTop: 0x2c3036,      // 실험대 상판 (검은 에폭시)
+  labBase: 0xb9bec3,     // 실험대 몸통
+  closet: 0xc9c2b2,      // 장 (베이지 철제/목재)
+  closetDoor: 0xd8d2c4,
+  glassCab: 0xbcd3df,    // 실험장 유리문
+  labLiquid: [0x4f8fb8, 0xc86a4a, 0x6aa86a, 0xd2b24c],
+  urinal: 0xf3f4f4,
+  pianoBody: 0x1c1d21,
+  pianoKeys: 0xf2f1ec,
+  stageWood: 0x8a6b45,   // 단상 앞판·바닥
+  stageStep: 0x9a7b52,
+  courtLine: 0xf0efe9,
+  courtBlue: 0x3f6fae,
+  hoopBoard: 0xf1f3f5,
+  hoopPole: 0x4a5058,
 
   signBg1: '#36424f',    // 표지판 (canvas 문자열 색)
   signBg2: '#2c3641',

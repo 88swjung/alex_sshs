@@ -59,6 +59,7 @@ export function createMinimap(canvas, world) {
   }
   // 문 없이 뚫린 통로(계단·외부연결·융합인재관 연결)도 같은 방식으로 터 줌
   for (const o of world.openings || []) {
+    g.strokeStyle = o.zone ? KIND_COLOR.gym : KIND_COLOR.corridor; // 같은 공간의 칸 사이는 그 공간 색으로 터 줌
     g.beginPath();
     if (o.horizontal) { g.moveTo(sx(o.s), sz(o.line)); g.lineTo(sx(o.e), sz(o.line)); }
     else { g.moveTo(sx(o.line), sz(o.s)); g.lineTo(sx(o.line), sz(o.e)); }

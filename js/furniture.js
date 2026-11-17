@@ -17,7 +17,7 @@
 //   colliders(o) : (선택) 충돌 상자 [lat, dep, sl, sd] 목록. 없으면 바닥 면적 전체
 //   collide:false: 충돌 없음 (벽에 붙은 것)
 //   shadow:false : 바닥 그림자 없음 (벽에 붙은 것)
-//   tall:true    : 키가 커서 창문·벽 장식을 가림
+//   tall:true    : 키가 커서 창문·벽 장식을 가림 (함수 o => boolean 도 가능: 크기 옵션에 따라 달라질 때)
 //   decor:true   : 장식품. world.furniture(숨는 곳 등 기능이 붙는 가구 목록)에는 기록하지 않음
 // ============================================================
 
@@ -169,10 +169,11 @@ export const FURNITURE_TYPES = {
       for (const s of [-1, 1]) c.box(s * (w / 2 - 0.015), 0, 0, 0.03, h - 0.03, d - 0.04, COLORS.laminateSide);
       c.box(0, 0.25, -d / 2 + 0.03, w - 0.06, h - 0.28, 0.02, COLORS.laminateSide); // 앞 가림판
       if (o.monitor) {
+        // 앉은 사람(뒤쪽, dep +) 쪽으로 화면이 향함
         c.box(0, h, -d / 2 + 0.2, 0.2, 0.02, 0.14, COLORS.metal);
         c.box(0, h + 0.02, -d / 2 + 0.2, 0.05, 0.12, 0.04, COLORS.metal);
         c.box(0, h + 0.14, -d / 2 + 0.2, 0.5, 0.3, 0.04, COLORS.monitor);
-        c.glow(0, h + 0.16, -d / 2 + 0.178, 0.45, 0.25, 0.005, COLORS.screen);
+        c.glow(0, h + 0.16, -d / 2 + 0.2 + 0.0225, 0.45, 0.25, 0.005, COLORS.screen);
         c.box(0, h, 0.1, 0.36, 0.018, 0.12, COLORS.metal); // 키보드
       }
       if (c.rand() < 0.5) c.box((c.rand() - 0.5) * (w - 0.5), h, 0.12, 0.21, 0.03, 0.297, 0xf1f1ee, ['up', (c.rand() - 0.5) * 0.5]); // 서류
@@ -226,6 +227,145 @@ export const FURNITURE_TYPES = {
           x += bw + 0.005;
         }
       }
+    },
+  },
+
+  // ---------------- 실험실 ----------------
+  // 실험대: 검은 상판 + 회색 몸통, 가운데 작은 싱크대와 수도·가스 꼭지. 사방에서 의자에 앉을 수 있음
+  labBench: {
+    size: { w: 1.4, d: 0.9, h: 0.82 },
+    build(c, o) {
+      const { w, d, h } = o;
+      c.box(0, 0, 0, w - 0.16, 0.07, d - 0.16, 0x4a4f55);                 // 받침
+      c.box(0, 0.07, 0, w - 0.1, h - 0.11, d - 0.1, COLORS.labBase);        // 몸통
+      c.box(0, h - 0.04, 0, w, 0.04, d, COLORS.labTop);                     // 상판
+      c.box(0, h, 0, 0.34, 0.01, 0.26, 0x14171b);                           // 싱크대 안쪽
+      c.box(0, h, 0.1, 0.03, 0.2, 0.03, COLORS.metal);                      // 수도꼭지
+      c.box(0, h + 0.18, 0.04, 0.03, 0.03, 0.12, COLORS.metal);
+      for (const s of [-1, 1]) c.box(s * (w / 2 - 0.2), h, 0, 0.03, 0.07, 0.03, 0xd0b030); // 가스 꼭지
+    },
+  },
+
+  // 장: h 로 높이를 바꿈 (기본 1.2m 낮은 장, 높은 장은 h: 2.2). 앞쪽에 문 여러 짝과 손잡이
+  closet: {
+    size: { w: 1.2, d: 0.5, h: 1.2 },
+    shadow: false,
+    tall: (o) => o.h > 1.4,
+    build(c, o) {
+      c.box(0, 0, 0, o.w, o.h, o.d, COLORS.closet);
+      const n = Math.max(2, Math.round(o.w / 0.6));
+      const dw = o.w / n;
+      for (let i = 0; i < n; i++) {
+        const lat = -o.w / 2 + dw * (i + 0.5);
+        c.box(lat, 0.04, -o.d / 2 - 0.008, dw - 0.03, o.h - 0.08, 0.016, COLORS.closetDoor);
+        const toCenter = i < n / 2 ? 1 : -1;
+        c.box(lat + toCenter * (dw / 2 - 0.07), o.h * 0.5, -o.d / 2 - 0.024, 0.02, 0.16, 0.02, COLORS.metal);
+      }
+      c.box(0, o.h, 0, o.w + 0.02, 0.025, o.d + 0.02, 0xb3ac9c); // 윗판
+    },
+  },
+
+  // 실험장: 아래는 닫힌 문, 위는 유리문(안에 약품병이 보임). h 로 높이를 바꿈 (높은 실험장은 h: 2.3)
+  labCabinet: {
+    size: { w: 1.4, d: 0.6, h: 1.9 },
+    shadow: false,
+    tall: true,
+    build(c, o) {
+      c.box(0, 0, 0, o.w, o.h, o.d, COLORS.cabinet);
+      const lowH = 0.85;
+      const n = Math.max(2, Math.round(o.w / 0.7));
+      const dw = o.w / n;
+      for (let i = 0; i < n; i++) {
+        const lat = -o.w / 2 + dw * (i + 0.5);
+        c.box(lat, 0.05, -o.d / 2 - 0.008, dw - 0.04, lowH - 0.05, 0.016, COLORS.cabinetPanel);                     // 아래 문
+        c.box(lat, lowH + 0.08, -o.d / 2 - 0.008, dw - 0.04, o.h - lowH - 0.16, 0.012, COLORS.glassCab);           // 위 유리문
+        c.box(lat + (i < n / 2 ? 1 : -1) * (dw / 2 - 0.06), lowH - 0.25, -o.d / 2 - 0.022, 0.02, 0.14, 0.02, COLORS.metal);
+      }
+      const shelves = Math.max(2, Math.floor((o.h - lowH - 0.2) / 0.38));
+      for (let s = 0; s < shelves; s++) {
+        const y = lowH + 0.12 + s * ((o.h - lowH - 0.34) / shelves);
+        c.box(0, y, -o.d / 2 - 0.016, o.w - 0.06, 0.02, 0.012, 0x6d747b);                                           // 선반
+        for (let x = -o.w / 2 + 0.12; x < o.w / 2 - 0.12; x += 0.16 + c.rand() * 0.06) {
+          c.box(x, y + 0.02, -o.d / 2 - 0.02, 0.07, 0.1 + c.rand() * 0.1, 0.012, pick(COLORS.labLiquid, c.rand()));  // 약품병
+        }
+      }
+    },
+  },
+
+  // 소파 (상담실)
+  sofa: {
+    size: { w: 1.8, d: 0.8 },
+    build(c, o) {
+      c.box(0, 0.06, 0, o.w, 0.3, o.d, 0x5c6f82);                                  // 좌판
+      c.box(0, 0.36, o.d / 2 - 0.1, o.w, 0.42, 0.2, 0x51636f);                     // 등받이
+      for (const s of [-1, 1]) c.box(s * (o.w / 2 - 0.09), 0.06, 0, 0.18, 0.5, o.d, 0x4a5a69); // 팔걸이
+      c.box(0, 0, 0, o.w - 0.1, 0.06, o.d - 0.1, 0x2d3137);                        // 받침
+    },
+  },
+
+  // ---------------- 화장실 (남자) ----------------
+  // 소변기: 뒤쪽이 벽. 앞쪽(face)을 향해 서서 사용
+  urinal: {
+    size: { w: 0.4, d: 0.36 },
+    shadow: false,
+    build(c, o) {
+      c.box(0, 0.4, 0.07, o.w - 0.04, 0.66, 0.2, COLORS.urinal);       // 몸통
+      c.box(0, 0.4, -0.06, o.w - 0.12, 0.34, 0.1, COLORS.urinal);       // 앞으로 나온 받침
+      c.box(0, 0.56, -0.08, o.w - 0.2, 0.06, 0.06, 0xdfe3e5);           // 안쪽 홈
+      c.box(0, 1.08, 0.14, 0.05, 0.5, 0.05, COLORS.metal);              // 물 내리는 관
+      c.box(0, 1.0, 0.1, 0.12, 0.1, 0.08, COLORS.metal);                // 센서
+    },
+    colliders: () => [[0, 0.06, 0.4, 0.24]],
+  },
+
+  // 소변기 사이 가림판 (벽에서 앞으로 튀어나옴)
+  urinalDivider: {
+    size: { w: 0.04, d: 0.5, h: 1.1 },
+    shadow: false,
+    build(c, o) {
+      c.box(0, 0.5, 0, o.w, o.h, o.d, COLORS.stallPartition);
+      c.box(0, 0.5 + o.h, 0, o.w + 0.01, 0.03, o.d, COLORS.metal);
+    },
+  },
+
+  // ---------------- 체육관 ----------------
+  // 피아노 (단상 위). 앞쪽(face)이 건반 쪽
+  piano: {
+    size: { w: 1.5, d: 0.65 },
+    build(c, o) {
+      c.box(0, 0.08, 0.02, o.w, 1.05, o.d - 0.1, COLORS.pianoBody);              // 몸통
+      c.box(0, 0, 0, o.w - 0.14, 0.08, o.d - 0.2, 0x2a2b30);                     // 받침
+      c.box(0, 0.73, -o.d / 2 + 0.02, o.w - 0.08, 0.05, 0.3, COLORS.pianoBody);  // 건반 받침판
+      c.box(0, 0.78, -o.d / 2 - 0.02, o.w - 0.14, 0.02, 0.22, COLORS.pianoKeys); // 건반
+      for (let i = 0; i < 12; i++) c.box(-o.w / 2 + 0.16 + i * ((o.w - 0.32) / 11), 0.8, -o.d / 2 + 0.02, 0.025, 0.015, 0.12, 0x111214);
+      c.box(0, 1.13, 0.02, o.w + 0.02, 0.04, o.d - 0.08, 0x26272c);              // 윗뚜껑
+    },
+  },
+
+  // 벽에 거는 농구 골대 (뒤쪽이 벽). 천장이 낮아서 백보드를 낮게 단 접이식
+  hoop: {
+    size: { w: 1.5, d: 0.5 },
+    collide: false,
+    shadow: false,
+    build(c, o) {
+      c.box(0, 1.95, 0.2, o.w, 0.9, 0.05, COLORS.hoopBoard);              // 백보드
+      c.box(0, 1.95, 0.19, o.w + 0.06, 0.04, 0.06, COLORS.hoopPole);      // 테두리
+      c.box(0, 2.81, 0.19, o.w + 0.06, 0.04, 0.06, COLORS.hoopPole);
+      c.box(0, 2.15, 0.18, 0.55, 0.38, 0.012, 0xd24a3a);                  // 표적 사각형
+      c.box(0, 2.1, -0.03, 0.46, 0.02, 0.46, 0xe0642f);                   // 림
+      c.box(0, 1.8, -0.03, 0.4, 0.3, 0.4, 0xf2f2f2);                      // 그물
+      c.box(0, 2.1, 0.12, 0.08, 0.04, 0.3, COLORS.hoopPole);              // 림 받침
+    },
+  },
+
+  // 바닥에 그은 선·색칠 (코트 라인 등). 옵션 color. 걸을 수 있고 그림자 없음
+  floorMark: {
+    size: { w: 1, d: 1, color: COLORS.courtLine },
+    decor: true,
+    collide: false,
+    shadow: false,
+    build(c, o) {
+      c.box(0, 0, 0, o.w, 0.012, o.d, o.color);
     },
   },
 

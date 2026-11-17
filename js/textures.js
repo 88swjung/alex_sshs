@@ -53,8 +53,20 @@ export function makeGlowTexture() {
   });
 }
 
+/**
+ * 창으로 들어온 햇빛이 바닥에 만드는 빛 얼룩 (창 모양 그대로의 사각형, 가장자리만 살짝 번짐).
+ * v=1(위쪽 가장자리)이 창에서 가까운 쪽이고, 멀어질수록 옅어짐.
+ */
+export function makeSunPatchTexture() {
+  return dataTexture(64, 64, 64, (u, v) => {
+    const edgeU = smoothstep(0, 0.07, u) * smoothstep(1, 0.93, u);
+    const edgeV = smoothstep(0, 0.1, v) * smoothstep(1, 0.96, v);
+    return edgeU * edgeV * (0.6 + 0.4 * v);
+  });
+}
+
 // ------------------------------------------------------------
-// 표지판 — 짙은 회청색 바탕에 흰 글씨의 평범한 실명 표지판
+// 표지판 —짙은 회청색 바탕에 흰 글씨의 평범한 실명 표지판
 // ------------------------------------------------------------
 const signCache = new Map();
 

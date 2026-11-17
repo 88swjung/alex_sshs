@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { GRAPHICS } from './config.js';
-import { makeBlobTexture, makeWallShadowTexture, makeGlowTexture } from './textures.js';
+import { makeBlobTexture, makeWallShadowTexture, makeGlowTexture, makeSunPatchTexture } from './textures.js';
 
 /**
  * 상자 재질(Lambert)에 "가짜 그늘(AO)"을 덧붙임.
@@ -67,6 +67,17 @@ export function createMaterials(ceilingHeight) {
     shadowBlob: createDecalMaterial(makeBlobTexture(), { color: 0x1a1208, opacity: 0.32 }),
     shadowWall: createDecalMaterial(makeWallShadowTexture(), { color: 0x1a1208, opacity: 0.42 }),
     glowDecal: createDecalMaterial(makeGlowTexture(), { additive: true }),
+    sunPatch: createDecalMaterial(makeSunPatchTexture(), { additive: true }),
+    // 창에서 내려오는 빛줄기: 정점 색의 투명도(alpha)로 세기를 줌. 더하기 혼합 + 깊이 쓰기 없음
+    sunShaft: new THREE.MeshBasicMaterial({
+      color: 0xfff1d0,
+      vertexColors: true,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      fog: false,
+    }),
   };
 }
 
