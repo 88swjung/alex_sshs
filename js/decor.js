@@ -2,7 +2,7 @@
 // decor.js — 벽면(face)을 보고 창문과 벽 장식을 "자동으로" 놓는다.
 //
 // mapData 에 따로 적지 않아도, 건물 바깥쪽에 면한 벽에는 창문이,
-// 복도·교실 등의 벽에는 게시판·포스터·소화기가, 긴 복도에는 화분·휴지통이 놓인다.
+// 복도·교실 등의 벽에는 게시판·포스터·소화기가, 긴 복도에는 휴지통이 놓인다.
 // 실제 학교 배치도로 바꿔도 새 벽에 맞춰서 알아서 다시 놓임.
 //
 // face(벽의 한쪽 면) 구조 — mapBuilder.js 에서 만들어 넘겨줌:
@@ -144,12 +144,12 @@ export function addWallDecor(B, faces, windowed) {
       B.placeFurniture({ id: B.nextId(face.room.id, type), type, room: face.room.id, x, z, f: [face.nx, face.nz], opts: {} });
     }
 
-    // 긴 복도에는 화분과 휴지통을 벽 쪽에 번갈아 놓음
+    // 긴 복도에는 휴지통을 벽 쪽에 놓음
     if (face.room.kind === 'corridor' && face.e - face.s >= 9) {
       const m = Math.floor((face.e - face.s) / 9);
       for (let i = 0; i < m; i++) {
         const p = face.s + ((i + 0.5) * (face.e - face.s)) / m + 1.8;
-        const type = hash(`${face.coord}|${i}|prop`) < 0.5 ? 'plant' : 'bin';
+        const type = 'bin';
         const d = B.types[type].size.d;
         if (isBlocked(B, face, p - d, p + d, 0.8)) continue;
         const [x, z] = facePoint(B, face, p, d / 2 + 0.02);

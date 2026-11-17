@@ -40,7 +40,7 @@ export const VIEW = {
 
 // --- 그래픽 / 성능 ---
 export const GRAPHICS = {
-  fogColor: 0xece5d3,    // 먼 곳이 이 색으로 흐려져서 복도가 깊어 보임
+  fogColor: 0xe4e4e1,    // 먼 곳이 이 색으로 흐려져서 복도가 깊어 보임
   fogNear: 22,
   fogFar: 78,
   maxPixelRatio: 1.5,    // 고해상도 화면에서도 이 이상으로는 안 그림 (성능)
@@ -49,70 +49,77 @@ export const GRAPHICS = {
   targetFps: 48,         // 이 값보다 낮게 나오면 해상도를 낮춤
 };
 
-// UI 글꼴. Jua 는 index.html 에서 구글 폰트로 불러오고, 못 불러오면 뒤쪽 글꼴이 대신 쓰임
-export const FONT_TITLE = '"Jua","Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif';
-export const FONT_SIGN = FONT_TITLE;
+// UI·표지판 글꼴 (1단계 때와 같은 기본 글꼴)
+export const FONT_UI = '"Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif';
 
 // --- 색상 (0xRRGGBB) ---
+// 형광등 아래의 평범한 고등학교: 채도를 낮춘 무채색 계열 + 학교 비품의 파랑·회색
 export const COLORS = {
-  wall: 0xf6ecd6,        // 벽 속 (눈에 거의 안 보임. 페인트가 덮음)
-  trim: 0xfffaf0,        // 벽 중간 띠, 천장 몰딩
-  baseboard: 0x6f6a5e,   // 걸레받이
-  ceiling: 0xfbf8f0,
-  lightHousing: 0xdad6cc,
-  lightGlow: 0xffffff,
-  doorFrame: 0x7a5233,
+  wall: 0xe8e6e0,        // 벽 속 (눈에 거의 안 보임. 페인트가 덮음)
+  trim: 0xcfd2d4,        // 벽 중간 띠, 천장 몰딩
+  baseboard: 0x5b5f66,   // 걸레받이
+  ceiling: 0xefefed,
+  lightHousing: 0xc4c8cc,
+  lightGlow: 0xf6f9ff,
+  doorFrame: 0x5e5a55,
 
-  wood: 0xc08a4f,        // 책상 상판
-  woodAlt: 0xd09c5f,
-  woodDark: 0x7a4f2a,    // 교탁·서랍
-  metal: 0x66707c,
-  chairs: [0x4a9fd1, 0x3fbfa8, 0xf0a04b, 0xe8698b], // 의자 색(무작위로 섞임)
-  board: 0x2d6a52,       // 칠판
-  boardFrame: 0xa57f52,
-  cork: 0xc9975c,
-  paper: [0xffffff, 0xffe27a, 0xff9fb0, 0x9fd8ff, 0xb8f0b0, 0xffc58a],
-  lockers: [0x4f8fc0, 0x3fa597, 0x7c9fd6],
-  stallPartition: 0x7cc7c3,
-  porcelain: 0xf6f6f6,
-  sinkBase: 0xdde3e8,
-  sinkTop: 0xb8c3cd,
-  mirror: 0xc4e7f3,
-  cabinet: 0x8e9ca9,
-  cabinetPanel: 0xaebbc6,
-  monitor: 0x20262d,
-  screen: 0x5aa7d6,
-  stairs: 0xc9c3b6,
-  stairsEdge: 0x9a9486,
-  rail: 0x5d6670,
-  plantPot: 0xc9724a,
-  plantLeaf: 0x4fa65b,
-  plantLeaf2: 0x6cc070,
-  bin: 0x4f7f9a,
-  extinguisher: 0xd8352a,
-  books: [0xd9534f, 0x4a9fd1, 0xf0c04b, 0x5cb85c, 0x8e6bbf, 0xf08a4b],
+  wood: 0xa88f6c,        // 교탁 상판
+  woodDark: 0x6b5a48,
+  metal: 0x80878e,
+  frameGray: 0x8b9096,   // 책상·의자 금속 프레임
+  deskTop: 0xc9ccd0,     // 학생 책상 상판 (밝은 회색)
+  deskRim: 0x474c53,     // 학생 책상 테두리 (진회색)
+  plasticBlue: 0x2d6cb3, // 책상 서랍, 의자 좌판·등받이
+  plasticHole: 0x15181c, // 의자 등받이 구멍
+  laminate: 0xd6d4ce,    // 교무실 책상 상판
+  laminateSide: 0xa9aeb3,
+  officeChair: 0x383d43,
+  whiteboard: 0xe3e6e8, // 화이트보드 (스스로 밝은 재질이라 이 정도로 잡아야 흰색으로 보임)
+  boardFrame: 0xb0b6bc,  // 알루미늄 프레임
+  eboardBezel: 0x2a2e34,
+  eboardScreen: 0x13161a, // 전자칠판 (꺼진 듯한 빈 화면)
+  cork: 0xb59368,
+  paper: [0xf1f1ee, 0xdfe5e9, 0xe8e3d2, 0xd4dce2],
+  stallPartition: 0xcfd6d8,
+  porcelain: 0xf3f4f4,
+  sinkBase: 0xdde1e4,
+  sinkTop: 0xb4bec6,
+  mirror: 0xbccbd3,
+  cabinet: 0x8d949b,
+  cabinetPanel: 0xa9b0b7,
+  monitor: 0x20252b,
+  screen: 0x6f8fa8,
+  stairs: 0xb4b1aa,
+  stairsEdge: 0x8f8c85,
+  rail: 0x565f68,
+  plantPot: 0x8a8f94,
+  plantLeaf: 0x4d7a4f,
+  plantLeaf2: 0x5f8f5e,
+  bin: 0x6f777f,
+  extinguisher: 0xc8352b,
+  books: [0x8a4b45, 0x3f5f7f, 0xb09a5a, 0x5a7a5f, 0x555a66, 0x7b6a4d],
 
-  windowFrame: 0xffffff,
-  windowSky: 0xa9dcff,
-  windowSkyLow: 0xe6f6ff,
-  curtain: [0xf7a8a0, 0xf6d28b, 0x9fd6c0, 0xa9bdf0],
-  sunGlow: 0xffe9b0,
+  windowFrame: 0xb7bcc1, // 알루미늄 창틀
+  windowSky: 0xb7cde2,   // 흐린 낮 하늘
+  windowSkyLow: 0xdde7ef,
+  curtain: [0xcbc5b8, 0xbcc1c4],
+  sunGlow: 0xf2ebd8,
 
-  signBg1: '#2a6f97',    // 표지판 (canvas 문자열 색)
-  signBg2: '#1d4e73',
-  signAccent: '#ffb347',
+  signBg1: '#36424f',    // 표지판 (canvas 문자열 색)
+  signBg2: '#2c3641',
+  signLine: 'rgba(255,255,255,0.55)',
   signText: '#ffffff',
 };
 
-// 방 종류별 벽 페인트: 아래쪽(lower, lowerH 높이까지)과 위쪽(upper) 색을 다르게 해서 학교 느낌을 냄
+// 방 종류별 벽 페인트: 아래쪽(lower, lowerH 높이까지)과 위쪽(upper) 색을 다르게 함
 export const WALL_STYLE = {
-  corridor:  { upper: 0xf9ead2, lower: 0x58b4a7, lowerH: 1.1 },
-  classroom: { upper: 0xfef3d4, lower: 0x93d3b6, lowerH: 1.1 },
-  restroom:  { upper: 0xe9f7f7, lower: 0x72c5d1, lowerH: 1.6 },
-  study:     { upper: 0xeef3e3, lower: 0xa9d48f, lowerH: 1.1 },
-  office:    { upper: 0xf0f0f5, lower: 0x7089b0, lowerH: 1.1 },
-  stairs:    { upper: 0xfcebd0, lower: 0xe8916b, lowerH: 1.1 },
-  default:   { upper: 0xf3ead6, lower: 0xb8b09c, lowerH: 1.1 },
+  corridor:  { upper: 0xe9e7e0, lower: 0xaeb8bd, lowerH: 1.0 },
+  classroom: { upper: 0xeceae3, lower: 0xd2d0c8, lowerH: 0.9 },
+  restroom:  { upper: 0xeceeee, lower: 0xd8e0e2, lowerH: 1.8 },
+  study:     { upper: 0xe8e8e1, lower: 0xbcc4bb, lowerH: 1.0 },
+  office:    { upper: 0xe9e8e3, lower: 0xc3c8ce, lowerH: 1.0 },
+  stairs:    { upper: 0xe4e1d9, lower: 0xaeb2b6, lowerH: 1.0 },
+  default:   { upper: 0xe6e4de, lower: 0xc3c1b9, lowerH: 1.0 },
 };
 
 // 방 종류별 바닥 스타일.
@@ -120,11 +127,11 @@ export const WALL_STYLE = {
 //   planks > 0 : 폭 planks(m) 널빤지를 긴 쪽으로 깔고 널빤지마다 밝기를 조금씩 다르게 함
 //   그 외      : 한 색
 export const FLOOR_STYLE = {
-  corridor:  { colors: [0xd9cdb1, 0xc6b996], tile: 1.5 },
-  classroom: { colors: [0xd9a96b], planks: 0.45 },
-  restroom:  { colors: [0xc5e8ee, 0xa6d6e0], tile: 0.6 },
-  study:     { colors: [0xb4cca6, 0xa9c49b], tile: 1.0 },
-  office:    { colors: [0x9fb0c7, 0x95a7c0], tile: 1.0 },
-  stairs:    { colors: [0xcfcac0, 0xc2bdb2], tile: 1.5 },
-  default:   { colors: [0xd0d0d0], tile: 0 },
+  corridor:  { colors: [0xbdb9ad, 0xb1ada1], tile: 1.2 },
+  classroom: { colors: [0xc4ab86], planks: 0.36 },
+  restroom:  { colors: [0xd4dbdc, 0xc6cfd1], tile: 0.5 },
+  study:     { colors: [0xaeb3ad, 0xa6aba5], tile: 1.0 },
+  office:    { colors: [0x8f959c, 0x878d94], tile: 1.0 },
+  stairs:    { colors: [0xb5b3ad, 0xaaa8a2], tile: 1.5 },
+  default:   { colors: [0xc8c8c8], tile: 0 },
 };

@@ -11,12 +11,13 @@
 //   id      : 고유 이름 (문·가구가 이 id로 방을 가리킴)
 //   name    : 화면(HUD)과 표지판에 쓰는 이름
 //   kind    : 'classroom'(교실) | 'restroom'(화장실) | 'study'(자습실) |
-//             'office'(교무실)  | 'stairs'(계단)     | 'corridor'(복도)
+//             'office'(교무실)  | 'stairs'(계단)     | 'corridor'(복도) |
+//             'solid'(벽으로 막힌 공간: 드나들 수 없고 문·가구·바닥이 없음)
 //   x, z, w, d : 위치와 크기
-//   front   : (선택) 이 방의 "앞쪽" 벽 'N'|'S'|'E'|'W'. 칠판·사물함·칸막이 같은 가구 배치 기준.
+//   front   : (선택) 이 방의 "앞쪽" 벽 'N'|'S'|'E'|'W'. 칠판·칸막이 같은 가구 배치 기준.
 //             생략하면 교실은 'W', 그 외는 첫 번째 문의 반대쪽 벽
 //   furniture : (선택) 생략 = 종류에 맞게 자동 배치 / false = 가구 없음 /
-//             { rows: 4, cols: 5, lockers: false ... } = 자동 배치 옵션 조절
+//             { rows: 4, cols: 5, clock: false ... } = 자동 배치 옵션 조절
 //             (옵션 목록은 mapBuilder.js 의 LAYOUTS 참고)
 //
 // 문(doors) 항목  — 이번 단계에서는 문짝 없이 뚫린 구멍
@@ -31,7 +32,7 @@
 //
 // 추가 가구(extraFurniture) — 자동 배치 외에 직접 놓고 싶은 가구
 //   { id, type, room, x, z, face: 'N'|'S'|'E'|'W', ...옵션 }
-//   type 은 mapBuilder.js 의 FURNITURE_TYPES 참고 (desk, chair, locker, cabinet ...)
+//   type 은 mapBuilder.js 의 FURNITURE_TYPES 참고 (desk, chair, table, cabinet ...)
 //   face 는 그 가구를 쓰는 사람이 바라보는 방향
 // ============================================================
 
@@ -46,29 +47,34 @@ export const MAP = {
     doorHeight: 2.1,    // 문 높이
   },
 
-  // 시작 위치: 복도 한가운데, 복도를 따라 동쪽을 바라봄
-  spawn: { x: 30, z: 1.5, facing: 'E' },
+  // 시작 위치: 복도 한가운데, 복도 끝의 자습실 문 쪽(서쪽)을 바라봄
+  spawn: { x: 30, z: 1.5, facing: 'W' },
 
   rooms: [
-    // ---- 복도 (동서로 60m, 폭 3m) ----
+    // ---- 복도 (동서로 60m, 폭 3m). 서쪽 끝은 자습실이 막고 있음 ----
     { id: 'corridor', name: '복도', kind: 'corridor', x: 0, z: 0, w: 60, d: 3 },
 
-    // ---- 복도 양 끝 계단실 (올라갈 수 없음) ----
-    { id: 'stairW', name: '서쪽 계단', kind: 'stairs', x: -6, z: -1.5, w: 6, d: 6, front: 'W' },
+    // ---- 복도 서쪽 끝: 자습실 (문이 복도 끝 x = 0 에 있음) ----
+    { id: 'study', name: '자습실', kind: 'study', x: -14, z: -2.5, w: 14, d: 8 },
+
+    // ---- 자습실 바로 앞, 복도 북쪽 옆의 계단실 (올라갈 수 없음) ----
+    { id: 'stairW', name: '서쪽 계단', kind: 'stairs', x: 0, z: -7.5, w: 6, d: 7.5 },
+
+    // ---- 복도 동쪽 끝 계단실 (올라갈 수 없음) ----
     { id: 'stairE', name: '동쪽 계단', kind: 'stairs', x: 60, z: -1.5, w: 6, d: 6, front: 'E' },
 
     // ---- 복도 북쪽: 교실 6개 (9m × 7.5m). 칠판은 서쪽 벽 ----
-    { id: 'class1', name: '1반', kind: 'classroom', x: 3,  z: -7.5, w: 9, d: 7.5, front: 'W' },
-    { id: 'class2', name: '2반', kind: 'classroom', x: 12, z: -7.5, w: 9, d: 7.5, front: 'W' },
-    { id: 'class3', name: '3반', kind: 'classroom', x: 21, z: -7.5, w: 9, d: 7.5, front: 'W' },
-    { id: 'class4', name: '4반', kind: 'classroom', x: 30, z: -7.5, w: 9, d: 7.5, front: 'W' },
-    { id: 'class5', name: '5반', kind: 'classroom', x: 39, z: -7.5, w: 9, d: 7.5, front: 'W' },
-    { id: 'class6', name: '6반', kind: 'classroom', x: 48, z: -7.5, w: 9, d: 7.5, front: 'W' },
+    { id: 'class1', name: '1반', kind: 'classroom', x: 6,  z: -7.5, w: 9, d: 7.5, front: 'W' },
+    { id: 'class2', name: '2반', kind: 'classroom', x: 15, z: -7.5, w: 9, d: 7.5, front: 'W' },
+    { id: 'class3', name: '3반', kind: 'classroom', x: 24, z: -7.5, w: 9, d: 7.5, front: 'W' },
+    { id: 'class4', name: '4반', kind: 'classroom', x: 33, z: -7.5, w: 9, d: 7.5, front: 'W' },
+    { id: 'class5', name: '5반', kind: 'classroom', x: 42, z: -7.5, w: 9, d: 7.5, front: 'W' },
+    { id: 'class6', name: '6반', kind: 'classroom', x: 51, z: -7.5, w: 9, d: 7.5, front: 'W' },
 
     // ---- 복도 남쪽 ----
-    { id: 'restroomM', name: '남자 화장실', kind: 'restroom', x: 3,  z: 3, w: 8,  d: 8 },
-    { id: 'restroomF', name: '여자 화장실', kind: 'restroom', x: 11, z: 3, w: 8,  d: 8 },
-    { id: 'study',     name: '자습실',      kind: 'study',    x: 19, z: 3, w: 14, d: 8 },
+    { id: 'restroomM', name: '남자 화장실', kind: 'restroom', x: 3,  z: 3, w: 8, d: 8 },
+    { id: 'restroomF', name: '여자 화장실', kind: 'restroom', x: 11, z: 3, w: 8, d: 8 },
+    { id: 'blocked',   name: '막힌 공간',   kind: 'solid',    x: 19, z: 3, w: 14, d: 8 }, // 원래 자습실 자리: 벽으로 막음
     { id: 'office',    name: '교무실',      kind: 'office',   x: 33, z: 3, w: 14, d: 8 },
   ],
 
@@ -90,11 +96,14 @@ export const MAP = {
     // 복도 남쪽 방들: 북쪽 벽에 문 1개
     { id: 'restroomM-door', room: 'restroomM', wall: 'N', pos: 1.5 },
     { id: 'restroomF-door', room: 'restroomF', wall: 'N', pos: 1.5 },
-    { id: 'study-door',     room: 'study',     wall: 'N', pos: 2.0 },
     { id: 'office-door',    room: 'office',    wall: 'N', pos: 2.0 },
 
-    // 계단실: 복도 쪽 벽에 문 1개 (z = 1.5, 복도 한가운데 높이)
-    { id: 'stairW-door', room: 'stairW', wall: 'E', pos: 3, label: '계단' },
+    // 자습실: 복도 끝(자습실 동쪽 벽)에 문. 복도 한가운데 높이(z = 1.5)
+    { id: 'study-door', room: 'study', wall: 'E', pos: 4 },
+
+    // 서쪽 계단실: 복도(남쪽) 쪽 벽에 문 1개
+    { id: 'stairW-door', room: 'stairW', wall: 'S', pos: 3, label: '계단' },
+    // 동쪽 계단실: 복도 쪽 벽에 문 1개
     { id: 'stairE-door', room: 'stairE', wall: 'W', pos: 3, label: '계단' },
   ],
 

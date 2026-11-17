@@ -5,12 +5,13 @@
 // ============================================================
 
 const KIND_COLOR = {
-  corridor: '#e8dfc9',
-  classroom: '#9fd8bd',
-  restroom: '#8fd0dc',
-  study: '#b6d6a0',
-  office: '#a9b9d6',
-  stairs: '#f0b190',
+  corridor: '#cfcdc6',
+  classroom: '#aab2b0',
+  restroom: '#a9b8be',
+  study: '#b3b9ac',
+  office: '#adb2ba',
+  stairs: '#bcb2a7',
+  solid: '#7d8084',
 };
 
 export function createMinimap(canvas, world) {
@@ -40,7 +41,7 @@ export function createMinimap(canvas, world) {
     g.fillStyle = KIND_COLOR[r.kind] || '#dddddd';
     g.fillRect(sx(r.x), sz(r.z), r.w * scale * dpr, r.d * scale * dpr);
   }
-  g.strokeStyle = 'rgba(30,40,55,0.85)';
+  g.strokeStyle = 'rgba(25,28,33,0.85)';
   g.lineWidth = Math.max(1, 1.2 * dpr);
   for (const r of world.rooms) g.strokeRect(sx(r.x), sz(r.z), r.w * scale * dpr, r.d * scale * dpr);
 
@@ -56,12 +57,12 @@ export function createMinimap(canvas, world) {
   }
 
   // 방 이름 (칸이 충분히 넓을 때만)
-  g.fillStyle = 'rgba(20,30,45,0.9)';
+  g.fillStyle = 'rgba(25,28,33,0.9)';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.font = `${Math.round(9.5 * dpr)}px "Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",sans-serif`;
   for (const r of world.rooms) {
-    if (r.kind === 'corridor' || r.kind === 'stairs') continue;
+    if (r.kind === 'corridor' || r.kind === 'stairs' || r.kind === 'solid') continue;
     const label = r.name;
     if (g.measureText(label).width < r.w * scale * dpr - 4 * dpr) g.fillText(label, sx(r.x + r.w / 2), sz(r.z + r.d / 2));
   }
@@ -81,7 +82,7 @@ export function createMinimap(canvas, world) {
 
       // 시야 부채꼴
       const len = 22 * dpr;
-      ctx.fillStyle = 'rgba(255,179,71,0.35)';
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
       ctx.beginPath();
       ctx.moveTo(px, pz);
       ctx.arc(px, pz, len, ang - 0.6, ang + 0.6);
@@ -89,8 +90,8 @@ export function createMinimap(canvas, world) {
       ctx.fill();
 
       // 내 위치 점
-      ctx.fillStyle = '#ff7a1a';
-      ctx.strokeStyle = '#ffffff';
+      ctx.fillStyle = '#f2f2f0';
+      ctx.strokeStyle = '#1b1e22';
       ctx.lineWidth = 2 * dpr;
       ctx.beginPath();
       ctx.arc(px, pz, 4 * dpr, 0, Math.PI * 2);

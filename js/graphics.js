@@ -79,9 +79,9 @@ export function setupGraphics(renderer, scene) {
   scene.background = new THREE.Color(GRAPHICS.fogColor);
   scene.fog = new THREE.Fog(GRAPHICS.fogColor, GRAPHICS.fogNear, GRAPHICS.fogFar);
 
-  // 낮 기준: 하늘색이 도는 위쪽 빛 + 따뜻한 바닥 반사광 + 약한 햇빛
-  scene.add(new THREE.HemisphereLight(0xfffaf0, 0xf2e6cc, 2.1));
-  const sun = new THREE.DirectionalLight(0xfff2d8, 1.5);
+  // 흐린 낮의 형광등 실내: 차분한 중성 흰빛 + 약한 방향광
+  scene.add(new THREE.HemisphereLight(0xf5f7fb, 0xe2dfd8, 2.0));
+  const sun = new THREE.DirectionalLight(0xfff8f0, 1.2);
   sun.position.set(-18, 40, 14);
   scene.add(sun);
 }

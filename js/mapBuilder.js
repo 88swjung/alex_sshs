@@ -243,6 +243,7 @@ export function buildWorld(map) {
 
   // ---- 바닥 · 천장 · 천장 조명 ----
   for (const r of rooms) {
+    if (r.kind === 'solid') continue; // 막힌 공간은 안에 들어갈 수 없으니 바닥·천장·조명 없음
     const style = FLOOR_STYLE[r.kind] || FLOOR_STYLE.default;
     const cx = r.x + r.w / 2, cz = r.z + r.d / 2;
     const rng = makeRng(hashStr('floor-' + r.id));
@@ -283,7 +284,7 @@ export function buildWorld(map) {
         const lx = r.x + (i + 0.5) * cw, lz = r.z + (j + 0.5) * cd;
         batch.add(lx, H - 0.02, lz, 1.3, 0.04, 0.5, COLORS.lightHousing);
         glow.add(lx, H - 0.045, lz, 1.12, 0.01, 0.34, COLORS.lightGlow);
-        glowDecal.add(lx, lz, Math.min(cw * 0.95, 3.6), Math.min(cd * 0.95, 3.6), scaled(0xfff1d6, 0.09));
+        glowDecal.add(lx, lz, Math.min(cw * 0.95, 3.6), Math.min(cd * 0.95, 3.6), scaled(0xf4f7ff, 0.08));
       }
     }
   }
@@ -333,7 +334,7 @@ export function buildWorld(map) {
         for (const side of [1, -1]) {
           const at = (sd) => (ln.horizontal ? roomAtPoint(m, ln.coord + sd * 0.3) : roomAtPoint(ln.coord + sd * 0.3, m));
           const room = at(side);
-          if (!room) continue; // 건물 바깥쪽 면은 안 보이니 칠하지 않음
+          if (!room || room.kind === 'solid') continue; // 건물 바깥·막힌 공간 쪽 면은 안 보이니 칠하지 않음
           faces.push({
             horizontal: ln.horizontal,
             coord: ln.coord,

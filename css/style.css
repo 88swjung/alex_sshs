@@ -1,21 +1,19 @@
-/* 찐알렉스 피하기 — 화면 스타일 */
+/* 찐알렉스 피하기 — 화면 스타일 (차분한 무채색 UI) */
 
 :root {
-  --title-font: "Jua", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   --ui-font: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
-  --panel: rgba(16, 24, 36, 0.72);
-  --panel-border: rgba(255, 255, 255, 0.1);
-  --accent: #ffb347;   /* 주황 */
-  --accent-2: #4fd1c5; /* 청록 */
-  --text: #f4f7fb;
-  --text-dim: #b8c4d4;
+  --panel: rgba(18, 20, 24, 0.78);
+  --panel-border: rgba(255, 255, 255, 0.14);
+  --text: #eceef0;
+  --text-dim: #9aa1a9;
+  --line: #d8dce0;
 }
 
 html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #1a2230;
+  background: #16181c;
   font-family: var(--ui-font);
   color: var(--text);
   user-select: none;
@@ -35,20 +33,20 @@ html, body {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 58%, rgba(10, 14, 24, 0.38) 100%);
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 60%, rgba(8, 10, 14, 0.3) 100%);
 }
 
-/* 조준점: 작은 점 + 얇은 흰 테두리 */
+/* 조준점: 작은 점 + 얇은 어두운 테두리 */
 #crosshair {
   position: fixed;
   left: 50%;
   top: 50%;
-  width: 6px;
-  height: 6px;
-  margin: -3px 0 0 -3px;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
   border-radius: 50%;
   background: #fff;
-  box-shadow: 0 0 0 1.5px rgba(10, 20, 35, 0.65), 0 0 8px rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 1px rgba(10, 12, 16, 0.7);
   pointer-events: none;
 }
 
@@ -61,35 +59,27 @@ html, body {
 #hud-pos {
   background: var(--panel);
   border: 1px solid var(--panel-border);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(3px);
+  border-radius: 3px;
 }
 
-/* 왼쪽 위: 방 이름 카드 */
+/* 왼쪽 위: 현재 방 */
 #hud-room {
   position: fixed;
   top: 16px;
   left: 16px;
-  min-width: 170px;
-  padding: 9px 16px 11px;
-  border-radius: 14px;
+  min-width: 140px;
+  padding: 8px 14px 9px;
 }
 #hud-room .tag {
   font-size: 11px;
-  letter-spacing: 0.5px;
-  color: var(--accent);
-  font-weight: bold;
+  color: var(--text-dim);
 }
 #hud-room .room-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 3px;
-  font-family: var(--title-font);
-  font-size: 26px;
-  line-height: 1.1;
+  margin-top: 2px;
+  font-size: 19px;
+  font-weight: bold;
+  line-height: 1.2;
 }
-#hud-room .pin { width: 20px; height: 20px; fill: var(--accent-2); flex: none; }
 
 /* 오른쪽 위: 미니맵 */
 #hud-map {
@@ -97,36 +87,34 @@ html, body {
   top: 16px;
   right: 16px;
   padding: 4px;
-  border-radius: 14px;
   line-height: 0;
 }
 #hud-map.hidden { display: none; }
-#minimap { border-radius: 10px; display: block; }
+#minimap { display: block; }
 
-/* 왼쪽 아래: 이동 상태 — 세 칸 중 현재 상태가 켜짐 */
+/* 왼쪽 아래: 이동 상태 — 현재 상태에 밑줄 */
 #hud-move {
   position: fixed;
   left: 16px;
   bottom: 16px;
   display: flex;
-  gap: 4px;
-  padding: 5px;
-  border-radius: 14px;
-  font-size: 15px;
-  font-weight: bold;
+  padding: 0 6px;
+  font-size: 13px;
 }
 #hud-move .seg {
-  padding: 7px 14px;
-  border-radius: 10px;
+  padding: 8px 10px 6px;
   color: var(--text-dim);
-  opacity: 0.55;
-  transition: background 0.12s, color 0.12s, opacity 0.12s;
+  border-bottom: 2px solid transparent;
 }
-#hud-move[data-mode="quiet"] .seg[data-m="quiet"] { background: #5aa9e6; color: #fff; opacity: 1; }
-#hud-move[data-mode="walk"]  .seg[data-m="walk"]  { background: #3fbf8f; color: #fff; opacity: 1; }
-#hud-move[data-mode="run"]   .seg[data-m="run"]   { background: #ff8a3d; color: #fff; opacity: 1; }
+#hud-move[data-mode="quiet"] .seg[data-m="quiet"],
+#hud-move[data-mode="walk"]  .seg[data-m="walk"],
+#hud-move[data-mode="run"]   .seg[data-m="run"] {
+  color: #fff;
+  font-weight: bold;
+  border-bottom-color: var(--line);
+}
 
-/* 아래 가운데: 조작 안내 (키캡 모양) */
+/* 아래 가운데: 조작 안내 */
 #hud-keys {
   position: fixed;
   left: 50%;
@@ -134,8 +122,7 @@ html, body {
   transform: translateX(-50%);
   display: flex;
   gap: 18px;
-  padding: 8px 18px;
-  border-radius: 14px;
+  padding: 7px 16px;
   white-space: nowrap;
 }
 #hud-keys .hint { display: flex; flex-direction: column; align-items: center; gap: 4px; }
@@ -146,27 +133,25 @@ html, body {
   position: fixed;
   right: 16px;
   bottom: 16px;
-  padding: 6px 12px;
-  border-radius: 10px;
+  padding: 6px 10px;
   font-size: 12px;
   font-family: Consolas, "Courier New", monospace;
   color: var(--text-dim);
 }
 
-/* 키캡 */
+/* 키 표시: 납작한 테두리 상자 */
 .keys { display: inline-flex; gap: 3px; }
 kbd {
   display: inline-block;
-  min-width: 18px;
-  padding: 3px 7px 4px;
-  border-radius: 6px;
-  background: linear-gradient(#fbfcfe, #dfe6ef);
-  color: #1b2a3d;
+  min-width: 16px;
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text);
   font-family: var(--ui-font);
   font-size: 12px;
-  font-weight: bold;
   text-align: center;
-  box-shadow: 0 2px 0 #8d9bb0, 0 3px 5px rgba(0, 0, 0, 0.3);
 }
 
 /* ------------- 시작 / 일시정지 화면 ------------- */
@@ -176,59 +161,38 @@ kbd {
   display: flex;
   align-items: center;
   justify-content: center;
-  background:
-    radial-gradient(ellipse at center, rgba(20, 40, 70, 0.55), rgba(8, 14, 26, 0.88)),
-    rgba(10, 20, 35, 0.3);
-  backdrop-filter: blur(5px);
+  background: rgba(10, 12, 15, 0.84);
   cursor: pointer;
 }
 #overlay.hidden { display: none; }
 
 #overlay .panel {
   text-align: center;
-  padding: 30px 46px 28px;
-  border-radius: 22px;
-  background: linear-gradient(160deg, rgba(34, 58, 92, 0.92), rgba(18, 30, 52, 0.92));
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
-}
-
-#overlay .badge {
-  display: inline-block;
-  padding: 4px 14px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #2b1b00;
-  font-size: 13px;
-  font-weight: bold;
+  padding: 8px 40px;
 }
 
 #overlay h1 {
-  margin: 12px 0 6px;
-  font-family: var(--title-font);
-  font-weight: normal;
-  font-size: 58px;
-  line-height: 1.1;
-  letter-spacing: 2px;
-  color: #fff;
-  text-shadow: 0 4px 0 #1d4e73, 0 6px 18px rgba(0, 0, 0, 0.5);
+  margin: 0;
+  font-size: 40px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  color: #f2f3f4;
+}
+
+#overlay .rule {
+  width: 64px;
+  height: 2px;
+  margin: 16px auto 18px;
+  background: var(--line);
 }
 
 #overlay .start {
-  display: table;
-  margin: 6px auto 22px;
-  padding: 9px 26px;
-  border-radius: 999px;
-  background: linear-gradient(#ffc766, #ff9d2e);
-  color: #3a2300;
-  font-size: 19px;
-  font-weight: bold;
-  box-shadow: 0 4px 0 #c46f0b, 0 8px 18px rgba(0, 0, 0, 0.35);
-  animation: pulse 1.6s ease-in-out infinite;
-}
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+  display: inline-block;
+  margin: 0 0 30px;
+  padding: 8px 22px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  font-size: 15px;
+  color: #f2f3f4;
 }
 
 #overlay .controls {
@@ -237,15 +201,14 @@ kbd {
   gap: 9px;
   text-align: left;
 }
-#overlay .row { display: flex; align-items: center; gap: 12px; }
-#overlay .row .keys { min-width: 126px; justify-content: flex-end; }
-#overlay .row kbd { font-size: 13px; }
-#overlay .desc { font-size: 15px; color: #dbe6f3; }
+#overlay .row { display: flex; align-items: center; gap: 14px; }
+#overlay .row .keys { min-width: 132px; justify-content: flex-end; }
+#overlay .desc { font-size: 14px; color: #c2c8ce; }
 
 /* 작은 화면(노트북 작은 창)에서는 조작 안내를 줄임 */
 @media (max-width: 900px) {
   #hud-keys { display: none; }
-  #overlay h1 { font-size: 40px; }
+  #overlay h1 { font-size: 30px; }
 }
 @media (max-height: 560px) {
   #overlay .controls { display: none; }

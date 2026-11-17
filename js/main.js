@@ -8,7 +8,6 @@ import { MAP } from './mapData.js';
 import { buildWorld } from './mapBuilder.js';
 import { Player } from './player.js';
 import { setupGraphics, AdaptiveQuality } from './graphics.js';
-import { redrawTextTexturesWhenFontReady } from './textures.js';
 import { createMinimap } from './minimap.js';
 
 const canvas = document.getElementById('game');
@@ -36,7 +35,6 @@ const camera = new THREE.PerspectiveCamera(CONFIG.fov, 1, CONFIG.near, CONFIG.fa
 // ---- 맵 · 플레이어 ----
 const world = buildWorld(MAP);
 scene.add(world.group);
-redrawTextTexturesWhenFontReady(); // 표지판·칠판 글씨를 Jua 글꼴로 다시 그림
 
 const player = new Player(camera, world);
 player.attach();
