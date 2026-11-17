@@ -5,7 +5,7 @@
 // 평평한 바닥이라 점프·중력은 없고, 충돌은 "원(반지름) vs 상자" 2D 계산으로 처리한다.
 // ============================================================
 
-import { CONFIG } from './config.js';
+import { CONFIG, VIEW } from './config.js';
 
 export class Player {
   /**
@@ -25,6 +25,13 @@ export class Player {
     this.z = 0;
     this.yaw = 0;
     this.pitch = 0;
+
+    // 화면 연출용 값
+    this.bobPhase = 0;
+    this.bobBlend = 0;
+    this.bobX = 0;
+    this.bobY = 0;
+    this.fovOffset = 0; // 달릴 때 시야각에 더해지는 값(도)
     this.respawn();
   }
 
@@ -87,8 +94,32 @@ export class Player {
 
   /** 한 프레임 진행 (dt: 초) */
   update(dt) {
+    const px = this.x, pz = this.z;
     if (this.enabled) this.move(dt);
+    this.updateViewEffects(dt, dt > 0 ? Math.hypot(this.x - px, this.z - pz) / dt : 0);
     this.applyCamera();
+  }
+
+  /**
+   * 보기 좋게 하는 연출 (이동 속도·충돌에는 영향 없음)
+   *  - 걸을 때 화면이 위아래로 살짝 흔들림 (달리기 > 걷기 > 조용히)
+   *  - 달릴 때 시야각이 살짝 넓어짐
+   * @param {number} speed 이번 프레임에 실제로 움직인 속도(m/s). 벽에 막히면 작아짐
+   */
+  updateViewEffects(dt, speed) {
+    const moving = this.enabled && speed > 0.3;
+    const k = 1 - Math.exp(-10 * dt);
+    this.bobBlend += ((moving ? 1 : 0) - this.bobBlend) * k;
+    this.bobPhase += speed * dt * 2.3; // 걸음 수에 맞춰 위상이 진행
+    const runTarget = this.enabled && moving && this.moveMode === 'run' ? VIEW.runFovKick : 0;
+    this.fovOffset += (runTarget - this.fovOffset) * (1 - Math.exp(-6 * dt));
+    this.bobY = 0;
+    this.bobX = 0;
+    if (VIEW.headBob) {
+      const amp = VIEW.bobAmount * Math.min(1.6, speed / CONFIG.speed.walk) * this.bobBlend;
+      this.bobY = Math.sin(this.bobPhase * 2) * amp;
+      this.bobX = Math.cos(this.bobPhase) * amp * 0.5;
+    }
   }
 
   move(dt) {
@@ -164,7 +195,9 @@ export class Player {
   }
 
   applyCamera() {
-    this.camera.position.set(this.x, CONFIG.eyeHeight, this.z);
+    // 흔들림은 카메라에만 더함 (this.x, this.z 같은 실제 위치는 그대로)
+    const cos = Math.cos(this.yaw), sin = Math.sin(this.yaw);
+    this.camera.position.set(this.x + cos * this.bobX, CONFIG.eyeHeight + this.bobY, this.z - sin * this.bobX);
     this.camera.rotation.set(this.pitch, this.yaw, 0);
   }
 }

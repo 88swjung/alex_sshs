@@ -4,7 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>찐알렉스 피하기</title>
+
+  <!-- 제목·표지판용 둥근 글꼴 (못 불러와도 기본 글꼴로 대신 표시됨) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="css/style.css">
+
   <!-- Three.js 를 CDN 에서 불러옴 (버전 고정) -->
   <script type="importmap">
     {
@@ -17,25 +24,58 @@
 <body>
   <canvas id="game"></canvas>
 
+  <!-- 화면 가장자리를 살짝 어둡게 (비네트) -->
+  <div id="vignette"></div>
+
   <!-- 조준점 -->
   <div id="crosshair"></div>
 
-  <!-- 왼쪽 아래: 이동 상태 / 오른쪽 아래: 좌표와 현재 방 -->
-  <div id="hud-move" data-mode="walk">걷기</div>
-  <div id="hud-pos"></div>
+  <div id="hud">
+    <!-- 왼쪽 위: 지금 있는 방 -->
+    <div id="hud-room" class="card">
+      <div class="tag">찐알렉스 피하기 · 1단계</div>
+      <div class="room-row">
+        <svg class="pin" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>
+        <span id="room-name">복도</span>
+      </div>
+    </div>
 
-  <!-- 시작 화면 (포인터가 풀리면 다시 나타남) -->
+    <!-- 오른쪽 위: 미니맵 (mapData 에서 자동 생성) -->
+    <div id="hud-map" class="card"><canvas id="minimap"></canvas></div>
+
+    <!-- 왼쪽 아래: 이동 상태 -->
+    <div id="hud-move" data-mode="walk">
+      <span class="seg" data-m="quiet">조용히</span>
+      <span class="seg" data-m="walk">걷기</span>
+      <span class="seg" data-m="run">달리기</span>
+    </div>
+
+    <!-- 아래 가운데: 조작 안내 -->
+    <div id="hud-keys">
+      <div class="hint"><span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span class="label">이동</span></div>
+      <div class="hint"><span class="keys"><kbd>마우스</kbd></span><span class="label">시점</span></div>
+      <div class="hint"><span class="keys"><kbd>Shift</kbd></span><span class="label">달리기</span></div>
+      <div class="hint"><span class="keys"><kbd>우클릭</kbd></span><span class="label">조용히</span></div>
+      <div class="hint"><span class="keys"><kbd>ESC</kbd></span><span class="label">일시정지</span></div>
+    </div>
+
+    <!-- 오른쪽 아래: 좌표와 방 이름 (실제 배치도와 맞출 때 사용) -->
+    <div id="hud-pos"></div>
+  </div>
+
+  <!-- 시작 / 일시정지 화면 -->
   <div id="overlay">
     <div class="panel">
+      <div class="badge">1단계 · 학교 탐험</div>
       <h1>찐알렉스 피하기</h1>
       <p id="overlay-msg" class="start">화면을 클릭하면 시작해요</p>
-      <ul class="controls">
-        <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>이동</span></li>
-        <li><kbd>마우스</kbd><span>시점 돌리기</span></li>
-        <li><kbd>Shift</kbd><span>누르고 있는 동안 달리기</span></li>
-        <li><kbd>오른쪽 버튼</kbd><span>누르고 있는 동안 조용히 걷기</span></li>
-        <li><kbd>ESC</kbd><span>일시정지 (마우스 풀기)</span></li>
-      </ul>
+      <div class="controls">
+        <div class="row"><span class="keys"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span class="desc">이동</span></div>
+        <div class="row"><span class="keys"><kbd>마우스</kbd></span><span class="desc">시점 돌리기</span></div>
+        <div class="row"><span class="keys"><kbd>Shift</kbd></span><span class="desc">누르고 있는 동안 달리기</span></div>
+        <div class="row"><span class="keys"><kbd>오른쪽 버튼</kbd></span><span class="desc">누르고 있는 동안 조용히 걷기</span></div>
+        <div class="row"><span class="keys"><kbd>ESC</kbd></span><span class="desc">일시정지 (마우스 풀기)</span></div>
+      </div>
     </div>
   </div>
 

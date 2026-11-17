@@ -1,0 +1,430 @@
+// ============================================================
+// furniture.js — 가구 종류(FURNITURE_TYPES)와 방 종류별 자동 배치(LAYOUTS)
+//
+// 가구는 모두 "상자"를 조합해서 만든다 (낮은 사양에서도 빠르게 그리기 위함).
+//
+// 가구 종류 정의:
+//   size    : { w: 옆 폭, d: 깊이, ... } 기본 크기. 배치 옵션(o)으로 덮어쓸 수 있음
+//   build(c, o) : 부품(상자)을 만든다.
+//       c.box(lat, y0, dep, sl, sh, sd, color, rot?)
+//         lat : 가구 중심에서 오른쪽(+)으로 떨어진 거리,  dep : 뒤쪽(+)으로 떨어진 거리
+//         y0  : 상자 바닥 높이,  sl/sh/sd : 옆 폭/높이/깊이
+//         rot : [축, 각도] 로 상자를 기울임. 축은 'lat'(옆) | 'dep'(앞뒤) | 'up'(위)
+//       c.glow(...)  : box 와 같지만 스스로 빛나는 재질 (모니터 화면 등)
+//       c.plane(lat, yCenter, dep, w, h, texture) : 앞면에 그림 한 장 붙이기
+//       c.rand()     : 이 가구 고유의 (항상 같은 값이 나오는) 난수 0~1
+//     "앞쪽"(dep < 0)은 face 가 가리키는 방향
+//   colliders(o) : (선택) 충돌 상자 [lat, dep, sl, sd] 목록. 없으면 바닥 면적 전체
+//   collide:false: 충돌 없음 (벽에 붙은 것)
+//   shadow:false : 바닥 그림자 없음 (벽에 붙은 것)
+//   tall:true    : 키가 커서 창문·벽 장식을 가림
+//   decor:true   : 장식품. world.furniture(숨는 곳 등 기능이 붙는 가구 목록)에는 기록하지 않음
+// ============================================================
+
+import * as THREE from 'three';
+import { COLORS } from './config.js';
+import { makeChalkTexture } from './textures.js';
+
+const pick = (arr, r) => arr[Math.min(arr.length - 1, Math.floor(r * arr.length))];
+const WHITE = new THREE.Color(0xffffff);
+const lighten = (hex, t) => new THREE.Color(hex).lerp(WHITE, t).getHex();
+
+export const FURNITURE_TYPES = {
+  // ---------------- 교실 ----------------
+  // 책상 (옵션: partition 가림판, monitor 모니터+키보드)
+  desk: {
+    size: { w: 0.6, d: 0.45, h: 0.72 },
+    build(c, o) {
+      c.box(0, o.h - 0.035, 0, o.w, 0.035, o.d, c.rand() < 0.5 ? COLORS.wood : COLORS.woodAlt);
+      c.box(0, o.h - 0.07, 0, o.w - 0.04, 0.035, o.d - 0.04, COLORS.woodDark); // 상판 아래 테두리
+      for (const sx of [-1, 1]) {
+        for (const sz of [-1, 1]) {
+          c.box(sx * (o.w / 2 - 0.04), 0, sz * (o.d / 2 - 0.04), 0.035, o.h - 0.07, 0.035, COLORS.metal);
+        }
+      }
+      if (!o.partition && !o.monitor) c.box(0, o.h - 0.3, 0.02, o.w - 0.1, 0.02, o.d - 0.1, COLORS.metal); // 책 넣는 선반
+      if (o.partition) c.box(0, o.h, -o.d / 2 + 0.015, o.w, 0.36, 0.03, COLORS.stallPartition);
+      if (o.monitor) {
+        c.box(0, o.h, -o.d / 2 + 0.2, 0.2, 0.02, 0.14, COLORS.metal);
+        c.box(0, o.h + 0.02, -o.d / 2 + 0.2, 0.05, 0.12, 0.04, COLORS.metal);
+        c.box(0, o.h + 0.14, -o.d / 2 + 0.2, 0.5, 0.3, 0.04, COLORS.monitor);
+        c.glow(0, o.h + 0.16, -o.d / 2 + 0.178, 0.45, 0.25, 0.005, COLORS.screen);
+        c.box(0, o.h, 0.1, 0.36, 0.018, 0.12, COLORS.metal); // 키보드
+      }
+      // 책·공책을 무작위로 올려 둠
+      if (c.rand() < 0.45) {
+        const x = (c.rand() - 0.5) * (o.w - 0.35), z = (c.rand() - 0.5) * (o.d - 0.2);
+        c.box(x, o.h, z, 0.2, 0.035, 0.15, pick(COLORS.books, c.rand()), ['up', (c.rand() - 0.5) * 0.8]);
+        if (c.rand() < 0.5) c.box(x, o.h + 0.035, z, 0.18, 0.025, 0.13, pick(COLORS.books, c.rand()), ['up', (c.rand() - 0.5) * 0.8]);
+      }
+    },
+  },
+
+  // 의자 (색이 무작위로 섞임)
+  chair: {
+    size: { w: 0.4, d: 0.4 },
+    build(c, o) {
+      const col = pick(COLORS.chairs, c.rand());
+      c.box(0, 0.42, 0, o.w, 0.045, o.d, col);
+      c.box(0, 0.47, o.d / 2 - 0.02, o.w - 0.02, 0.36, 0.04, col); // 등받이(뒤쪽)
+      for (const sx of [-1, 1]) {
+        for (const sz of [-1, 1]) {
+          c.box(sx * (o.w / 2 - 0.035), 0, sz * (o.d / 2 - 0.035), 0.03, 0.42, 0.03, COLORS.metal);
+        }
+      }
+    },
+  },
+
+  // 칠판 + 분필 글씨 (옵션: title, subtitle)
+  board: {
+    size: { w: 4.0, d: 0.06, title: '', subtitle: '' },
+    collide: false,
+    shadow: false,
+    tall: true,
+    build(c, o) {
+      c.box(0, 0.95, 0, o.w + 0.14, 1.3, o.d, COLORS.boardFrame);   // 테두리
+      c.box(0, 1.0, -0.005, o.w, 1.2, o.d + 0.01, COLORS.board);    // 칠판 면 (살짝 튀어나옴)
+      c.box(0, 0.92, -0.07, o.w, 0.035, 0.1, COLORS.boardFrame);    // 분필 받침
+      c.box(-o.w * 0.3, 0.955, -0.1, 0.12, 0.02, 0.035, 0xffffff);  // 분필
+      c.box(-o.w * 0.25, 0.955, -0.1, 0.1, 0.02, 0.035, 0xffe27a);
+      if (o.title) c.plane(0, 1.6, -o.d / 2 - 0.012, o.w - 0.2, (o.w - 0.2) / 4, makeChalkTexture(o.title, o.subtitle));
+    },
+  },
+
+  // 교탁 (4단계에서 "교탁 밑" 숨기를 붙일 예정)
+  lectern: {
+    size: { w: 1.2, d: 0.6 },
+    build(c, o) {
+      c.box(0, 0, 0, o.w - 0.1, 0.88, o.d - 0.1, COLORS.woodDark);
+      c.box(0, 0, -(o.d - 0.1) / 2 - 0.005, o.w - 0.3, 0.8, 0.01, COLORS.wood); // 앞 판
+      c.box(0, 0.88, 0, o.w, 0.05, o.d, COLORS.wood);
+      c.box(0.3, 0.93, 0.05, 0.32, 0.02, 0.24, 0xffffff, ['up', 0.2]); // 출석부
+      c.box(-0.3, 0.93, 0.0, 0.2, 0.2, 0.2, COLORS.plantPot);          // 화분(컵)
+      c.box(-0.3, 1.13, 0.0, 0.16, 0.14, 0.16, COLORS.plantLeaf);
+    },
+  },
+
+  // 사물함 한 칸 (4단계에서 숨는 곳이 될 예정)
+  locker: {
+    size: { w: 0.5, d: 0.45 },
+    shadow: false,
+    tall: true,
+    build(c, o) {
+      const col = pick(COLORS.lockers, c.rand());
+      c.box(0, 0, 0, o.w, 1.9, o.d, col);
+      c.box(0, 0.08, -o.d / 2 - 0.004, o.w - 0.08, 1.74, 0.008, lighten(col, 0.25));
+      c.box(0, 1.5, -o.d / 2 - 0.01, 0.25, 0.03, 0.012, COLORS.metal);       // 환기구
+      c.box(0, 1.42, -o.d / 2 - 0.01, 0.25, 0.03, 0.012, COLORS.metal);
+      c.box(0.12, 0.95, -o.d / 2 - 0.012, 0.03, 0.12, 0.012, COLORS.metal);  // 손잡이
+      c.box(0, 0.995, -o.d / 2 - 0.006, o.w - 0.08, 0.01, 0.006, col);       // 위·아래 칸 구분선
+    },
+  },
+
+  // ---------------- 화장실 ----------------
+  // 화장실 칸 (앞이 열려 있음). left/right: 옆 칸막이를 세울지
+  stall: {
+    size: { w: 1.0, d: 1.4 },
+    shadow: false,
+    build(c, o) {
+      for (const side of [-1, 1]) {
+        if ((side < 0 && !o.left) || (side > 0 && !o.right)) continue;
+        c.box(side * (o.w / 2 - 0.02), 0.15, 0, 0.04, 1.65, o.d, COLORS.stallPartition);
+        c.box(side * (o.w / 2 - 0.02), 1.7, 0, 0.05, 0.05, o.d, COLORS.metal); // 칸막이 윗 테두리
+      }
+      // 변기 (뒤쪽 벽에 붙음)
+      c.box(0, 0, o.d / 2 - 0.3, 0.38, 0.38, 0.55, COLORS.porcelain);
+      c.box(0, 0.38, o.d / 2 - 0.28, 0.4, 0.04, 0.5, COLORS.porcelain);
+      c.box(0, 0.38, o.d / 2 - 0.07, 0.38, 0.4, 0.14, COLORS.porcelain);
+      c.box(0.2, 0.75, o.d / 2 - 0.07, 0.04, 0.03, 0.03, COLORS.metal); // 물 내리는 손잡이
+      c.box(-0.26, 0.5, o.d / 2 - 0.05, 0.14, 0.14, 0.1, 0xffffff);      // 휴지걸이
+    },
+    colliders(o) {
+      const list = [[0, o.d / 2 - 0.3, 0.4, 0.55]]; // 변기
+      if (o.left) list.push([-o.w / 2 + 0.02, 0, 0.04, o.d]);
+      if (o.right) list.push([o.w / 2 - 0.02, 0, 0.04, o.d]);
+      return list;
+    },
+  },
+
+  // 세면대 + 거울 (뒤쪽이 벽)
+  sink: {
+    size: { w: 0.6, d: 0.5 },
+    shadow: false,
+    build(c, o) {
+      c.box(0, 0, 0, o.w, 0.8, o.d, COLORS.sinkBase);
+      c.box(0, 0.8, 0, o.w, 0.05, o.d, COLORS.sinkTop);
+      c.box(0, 0.85, 0.02, 0.4, 0.02, 0.3, 0xeef3f6);                 // 세면대 안쪽 홈
+      c.box(0, 0.85, o.d / 2 - 0.08, 0.04, 0.16, 0.04, COLORS.metal); // 수도꼭지
+      c.box(0, 0.99, o.d / 2 - 0.14, 0.04, 0.03, 0.14, COLORS.metal);
+      c.glow(0, 1.15, o.d / 2 - 0.01, o.w, 0.85, 0.02, COLORS.mirror);
+      c.box(0, 1.13, o.d / 2 - 0.014, o.w + 0.06, 0.91, 0.016, 0xffffff); // 거울 테두리
+    },
+  },
+
+  // ---------------- 교무실 / 자습실 ----------------
+  // 서류 캐비닛
+  cabinet: {
+    size: { w: 0.9, d: 0.45 },
+    shadow: false,
+    tall: true,
+    build(c, o) {
+      c.box(0, 0, 0, o.w, 1.8, o.d, COLORS.cabinet);
+      c.box(0, 0.05, -o.d / 2 - 0.004, o.w - 0.06, 1.7, 0.008, COLORS.cabinetPanel);
+      c.box(0, 0.9, -o.d / 2 - 0.012, 0.3, 0.03, 0.012, COLORS.metal);
+      for (const y of [0.45, 1.35]) c.box(0, y, -o.d / 2 - 0.012, 0.3, 0.03, 0.012, COLORS.metal);
+    },
+  },
+
+  // 책장 (옵션: w 로 폭 조절)
+  bookshelf: {
+    size: { w: 1.6, d: 0.4, h: 1.9 },
+    shadow: false,
+    tall: true,
+    build(c, o) {
+      c.box(0, 0, 0.0, o.w, o.h, o.d, COLORS.woodDark);
+      // 선반 4칸에 책 꽂기
+      const shelfH = (o.h - 0.1) / 4;
+      for (let s = 0; s < 4; s++) {
+        const y0 = 0.07 + s * shelfH;
+        c.box(0, y0 - 0.02, -0.01, o.w - 0.08, shelfH - 0.06 + 0.02, o.d - 0.04, 0x3a2614); // 안쪽 어두운 면
+        let x = -o.w / 2 + 0.07;
+        while (x < o.w / 2 - 0.1) {
+          const bw = 0.04 + c.rand() * 0.05;
+          const bh = shelfH * (0.55 + c.rand() * 0.35);
+          if (c.rand() < 0.1) { x += 0.12; continue; } // 가끔 빈 자리
+          c.box(x + bw / 2, y0, -0.02, bw, bh, o.d - 0.1, pick(COLORS.books, c.rand()));
+          x += bw + 0.005;
+        }
+      }
+    },
+  },
+
+  // ---------------- 계단 ----------------
+  // 계단 한 줄 + 난간. face = 올라가는 사람이 바라보는 방향. 보기만 하고 올라갈 수 없음
+  stairs: {
+    size: { w: 2.2, d: 4.8, steps: 17, rise: 0.17 },
+    tall: true,
+    build(c, o) {
+      const run = o.d / o.steps;
+      const depOf = (i) => o.d / 2 - (i + 0.5) * run; // 낮은 계단이 뒤쪽, 높은 계단이 앞쪽
+      for (let i = 0; i < o.steps; i++) {
+        const h = (i + 1) * o.rise;
+        c.box(0, 0, depOf(i), o.w, h - 0.03, run, COLORS.stairsEdge);              // 계단 옆면(챙)
+        c.box(0, h - 0.03, depOf(i) + 0.02, o.w, 0.03, run + 0.04, COLORS.stairs); // 밟는 면
+      }
+      // 난간: 기둥 + 경사진 손잡이
+      const total = o.steps * o.rise;
+      const slope = Math.atan2(total - o.rise, o.d - run);
+      const len = Math.hypot(o.d - run, total - o.rise);
+      for (const side of [-1, 1]) {
+        const lat = side * (o.w / 2 - 0.04);
+        for (let i = 0; i < o.steps; i += 3) c.box(lat, (i + 1) * o.rise, depOf(i), 0.04, 0.9, 0.04, COLORS.rail);
+        c.box(lat, (total + o.rise) / 2 + 0.9 - 0.025, 0, 0.06, 0.05, len, COLORS.rail, ['lat', slope]);
+      }
+    },
+  },
+
+  // ---------------- 장식품 (벽에 붙이는 것 포함) ----------------
+  // 화분
+  plant: {
+    size: { w: 0.5, d: 0.5 },
+    decor: true,
+    build(c, o) {
+      c.box(0, 0, 0, 0.34, 0.34, 0.34, COLORS.plantPot);
+      c.box(0, 0.34, 0, 0.3, 0.04, 0.3, 0x5a3a22); // 흙
+      for (let i = 0; i < 6; i++) {
+        const a = c.rand() * 6.28, r = 0.05 + c.rand() * 0.12;
+        const s = 0.22 + c.rand() * 0.16;
+        c.box(Math.cos(a) * r, 0.4 + i * 0.09, Math.sin(a) * r, s, 0.12, s, i % 2 ? COLORS.plantLeaf : COLORS.plantLeaf2, ['up', c.rand() * 3]);
+      }
+    },
+  },
+
+  // 휴지통
+  bin: {
+    size: { w: 0.36, d: 0.36 },
+    decor: true,
+    build(c, o) {
+      c.box(0, 0, 0, o.w, 0.55, o.d, COLORS.bin);
+      c.box(0, 0.55, 0, o.w + 0.02, 0.03, o.d + 0.02, lighten(COLORS.bin, 0.3));
+      c.box(0, 0.35, -o.d / 2 - 0.004, o.w - 0.08, 0.04, 0.008, lighten(COLORS.bin, 0.5));
+    },
+  },
+
+  // 벽시계 (벽 쪽이 뒤)
+  clock: {
+    size: { w: 0.42, d: 0.05, y: 2.4 },
+    decor: true,
+    collide: false,
+    shadow: false,
+    build(c, o) {
+      c.box(0, o.y - 0.21, 0, 0.42, 0.42, o.d, 0x2c2c33);                           // 테두리
+      c.box(0, o.y - 0.195, -0.004, 0.37, 0.37, o.d, 0xffffff);                     // 시계판
+      c.box(-0.035, o.y - 0.135, -0.03, 0.02, 0.13, 0.012, 0x222222, ['dep', 0.5]); // 시침
+      c.box(0.03, o.y - 0.12, -0.034, 0.012, 0.19, 0.012, 0x222222, ['dep', -0.9]); // 분침
+      c.box(0, o.y - 0.2, -0.04, 0.03, 0.03, 0.014, COLORS.extinguisher);           // 가운데 점
+    },
+  },
+
+  // 게시판 (코르크 + 알록달록한 종이)
+  corkboard: {
+    size: { w: 1.6, d: 0.04, h: 0.9, y: 1.15 },
+    decor: true,
+    collide: false,
+    shadow: false,
+    build(c, o) {
+      c.box(0, o.y - 0.04, 0, o.w + 0.1, o.h + 0.08, o.d, COLORS.boardFrame);
+      c.box(0, o.y, -0.006, o.w, o.h, o.d, COLORS.cork);
+      const n = Math.floor(o.w * 4);
+      for (let i = 0; i < n; i++) {
+        const pw = 0.18 + c.rand() * 0.18, ph = 0.2 + c.rand() * 0.25;
+        const x = (c.rand() - 0.5) * (o.w - pw - 0.1), y = o.y + 0.05 + c.rand() * (o.h - ph - 0.1);
+        c.box(x, y, -0.03, pw, ph, 0.008, pick(COLORS.paper, c.rand()), ['dep', (c.rand() - 0.5) * 0.3]);
+        c.box(x, y + ph - 0.03, -0.037, 0.025, 0.025, 0.008, COLORS.extinguisher); // 압정
+      }
+    },
+  },
+
+  // 포스터
+  poster: {
+    size: { w: 0.62, d: 0.02, h: 0.88, y: 1.2 },
+    decor: true,
+    collide: false,
+    shadow: false,
+    build(c, o) {
+      const bg = pick(COLORS.paper, c.rand());
+      c.box(0, o.y, 0, o.w, o.h, o.d, bg);
+      c.box(0, o.y + o.h * 0.5, -0.0135, o.w - 0.1, o.h * 0.38, 0.006, pick(COLORS.chairs, c.rand())); // 그림
+      c.box(0, o.y + o.h * 0.32, -0.0135, o.w - 0.2, 0.05, 0.006, 0x333333);                           // 제목 줄
+      c.box(0, o.y + o.h * 0.2, -0.0135, o.w - 0.24, 0.03, 0.006, 0x666666);                           // 글 줄
+      c.box(0, o.y + o.h * 0.12, -0.0135, o.w - 0.3, 0.03, 0.006, 0x666666);
+    },
+  },
+
+  // 소화기
+  extinguisher: {
+    size: { w: 0.22, d: 0.14 },
+    decor: true,
+    collide: false,
+    shadow: false,
+    build(c, o) {
+      c.box(0, 0.35, 0.03, 0.04, 0.5, 0.03, COLORS.metal);                  // 벽 고정대
+      c.box(0, 0.4, -0.01, 0.14, 0.46, 0.12, COLORS.extinguisher);          // 몸통
+      c.box(0, 0.86, -0.01, 0.07, 0.07, 0.07, 0x222222);                    // 머리
+      c.box(0.06, 0.78, -0.07, 0.03, 0.03, 0.08, 0x222222);                 // 호스
+      c.box(0, 1.35, 0.05, 0.3, 0.3, 0.012, 0xffffff);                      // 위치 표지판
+      c.box(0, 1.35, 0.043, 0.22, 0.22, 0.012, COLORS.extinguisher);
+    },
+  },
+};
+
+// ------------------------------------------------------------
+// 방 종류별 자동 배치(LAYOUTS)
+//   room.furniture 에 객체를 주면 아래 기본 옵션을 덮어쓴다.
+//   F : 방 기준 좌표계 (A = 앞벽~뒷벽 깊이, B = 옆 폭)
+//   반환값: [{ type, a, b, face, o? }, ...]  (a, b 는 앞벽/왼쪽에서 잰 거리)
+// ------------------------------------------------------------
+export const LAYOUTS = {
+  // 옵션: board, lectern, lockers, clock, bin (true/false), rows, cols, rowGap, colGap
+  classroom(F, opt, room) {
+    const o = { board: true, lectern: true, lockers: true, clock: true, bin: true, rows: 5, cols: 5, rowGap: 1.0, colGap: 1.3, ...opt };
+    const items = [];
+    if (o.board) {
+      items.push({ type: 'board', a: 0.03, b: F.B / 2, face: 'back', o: { w: Math.min(4.2, F.B - 1), title: room.name, subtitle: '찐알렉스 피하기!' } });
+    }
+    if (o.clock) items.push({ type: 'clock', a: 0.025, b: F.B / 2, face: 'back' });
+    if (o.lectern) items.push({ type: 'lectern', a: 1.1, b: F.B / 2, face: 'back' });
+    if (o.bin) items.push({ type: 'bin', a: 0.4, b: 0.4, face: 'back' });
+
+    // 책상·의자: 학생이 앞(칠판)을 보고 앉음
+    for (let r = 0; r < o.rows; r++) {
+      for (let c = 0; c < o.cols; c++) {
+        const a = 2.4 + r * o.rowGap;
+        const b = 0.8 + c * o.colGap;
+        if (a + 0.7 > F.A - (o.lockers ? 0.45 : 0) || b + 0.3 > F.B) continue; // 방을 벗어나면 생략
+        items.push({ type: 'desk', a, b, face: 'front' });
+        items.push({ type: 'chair', a: a + 0.48, b, face: 'front' });
+      }
+    }
+
+    // 뒤쪽 벽 사물함 줄
+    if (o.lockers) {
+      const n = Math.floor((F.B - 0.2) / 0.5);
+      const b0 = (F.B - n * 0.5) / 2 + 0.25;
+      for (let k = 0; k < n; k++) items.push({ type: 'locker', a: F.A - 0.225, b: b0 + k * 0.5, face: 'front' });
+    }
+    return items;
+  },
+
+  // 옵션: stalls(칸 수), sinks(세면대 수), bin
+  restroom(F, opt) {
+    const o = { stalls: 4, sinks: 3, bin: true, ...opt };
+    const items = [];
+    for (let k = 0; k < o.stalls; k++) {
+      items.push({ type: 'stall', a: 0.7, b: 0.5 + k * 1.0, face: 'back', o: { left: k > 0, right: k === o.stalls - 1 } });
+    }
+    for (let k = 0; k < o.sinks; k++) items.push({ type: 'sink', a: 3.0 + k * 1.2, b: F.B - 0.25, face: 'left' });
+    if (o.bin) items.push({ type: 'bin', a: F.A - 0.4, b: F.B - 0.35, face: 'front' });
+    return items;
+  },
+
+  // 옵션: rows, cols, rowGap, colGap, shelves, plant
+  study(F, opt) {
+    const o = { rows: 3, cols: 6, rowGap: 1.8, colGap: 2.2, shelves: 3, plant: true, ...opt };
+    const items = [];
+    for (let r = 0; r < o.rows; r++) {
+      for (let c = 0; c < o.cols; c++) {
+        const a = 1.3 + r * o.rowGap;
+        const b = 1.3 + c * o.colGap;
+        if (a + 1.0 > F.A || b + 0.7 > F.B) continue;
+        items.push({ type: 'desk', a, b, face: 'front', o: { w: 1.4, d: 0.7, h: 0.74, partition: true } });
+        items.push({ type: 'chair', a: a + 0.75, b, face: 'front', o: { w: 0.45, d: 0.45 } });
+      }
+    }
+    // 오른쪽 벽을 따라 책장
+    for (let k = 0; k < o.shelves; k++) {
+      items.push({ type: 'bookshelf', a: 1.2 + k * 1.75, b: F.B - 0.2, face: 'left' });
+    }
+    if (o.plant) items.push({ type: 'plant', a: F.A - 0.4, b: F.B - 0.4, face: 'front' });
+    return items;
+  },
+
+  // 옵션: rows, cols, rowGap, colGap, cabinets, plant
+  office(F, opt) {
+    const o = { rows: 2, cols: 4, rowGap: 2.6, colGap: 3.2, cabinets: true, plant: true, ...opt };
+    const items = [];
+    for (let r = 0; r < o.rows; r++) {
+      for (let c = 0; c < o.cols; c++) {
+        const a = 1.7 + r * o.rowGap;
+        const b = 2.0 + c * o.colGap;
+        if (a + 1.0 > F.A || b + 0.7 > F.B) continue;
+        items.push({ type: 'desk', a, b, face: 'front', o: { w: 1.4, d: 0.75, h: 0.75, monitor: true } });
+        items.push({ type: 'chair', a: a + 0.8, b, face: 'front', o: { w: 0.45, d: 0.45 } });
+      }
+    }
+    if (o.cabinets) {
+      for (let k = 0; k < 5; k++) items.push({ type: 'cabinet', a: 0.25, b: 0.6 + k * 1.0, face: 'back' });
+    }
+    if (o.plant) items.push({ type: 'plant', a: F.A - 0.4, b: F.B - 0.4, face: 'front' });
+    return items;
+  },
+
+  // 앞쪽(front) 벽에 붙여 계단 한 줄. 위로 올라가는 쪽이 앞벽
+  stairs() {
+    return [{ type: 'stairs', a: 2.4, b: 1.1, face: 'front' }];
+  },
+
+  corridor() {
+    return [];
+  },
+};
+
+// 방 종류 → 자동 배치 함수 이름
+export const LAYOUT_BY_KIND = {
+  classroom: 'classroom',
+  restroom: 'restroom',
+  study: 'study',
+  office: 'office',
+  stairs: 'stairs',
+  corridor: 'corridor',
+};

@@ -3,50 +3,49 @@
 // ============================================================
 
 import * as THREE from 'three';
-import { CONFIG, COLORS } from './config.js';
+import { CONFIG, VIEW } from './config.js';
 import { MAP } from './mapData.js';
 import { buildWorld } from './mapBuilder.js';
 import { Player } from './player.js';
+import { setupGraphics, AdaptiveQuality } from './graphics.js';
+import { redrawTextTexturesWhenFontReady } from './textures.js';
+import { createMinimap } from './minimap.js';
 
 const canvas = document.getElementById('game');
 const overlay = document.getElementById('overlay');
 const overlayMsg = document.getElementById('overlay-msg');
 const hudMove = document.getElementById('hud-move');
 const hudPos = document.getElementById('hud-pos');
-
-const MODE_LABEL = { quiet: '조용히', walk: '걷기', run: '달리기' };
+const roomName = document.getElementById('room-name');
+const hudMap = document.getElementById('hud-map');
 
 // ---- 렌더러 · 장면 ----
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 } catch (err) {
   overlayMsg.textContent = '이 브라우저에서는 3D(WebGL)를 쓸 수 없어요.';
   throw err;
 }
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = false; // 성능을 위해 그림자 끔
-
+const quality = new AdaptiveQuality(renderer);
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(COLORS.sky);
-
-// 낮 기준의 밝은 조명 (그림자 없음)
-scene.add(new THREE.HemisphereLight(0xffffff, 0xf0ead8, 2.4));
-const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-sun.position.set(-20, 40, 15);
-scene.add(sun);
+setupGraphics(renderer, scene);
 
 const camera = new THREE.PerspectiveCamera(CONFIG.fov, 1, CONFIG.near, CONFIG.far);
 
 // ---- 맵 · 플레이어 ----
 const world = buildWorld(MAP);
 scene.add(world.group);
+redrawTextTexturesWhenFontReady(); // 표지판·칠판 글씨를 Jua 글꼴로 다시 그림
 
 const player = new Player(camera, world);
 player.attach();
 
+const minimap = VIEW.minimap ? createMinimap(document.getElementById('minimap'), world) : null;
+if (!minimap) hudMap.classList.add('hidden');
+
 // 디버깅·다음 단계 개발용: 브라우저 콘솔에서 window.game 으로 접근 가능
-window.game = { THREE, scene, camera, world, player };
+window.game = { THREE, scene, camera, renderer, world, player, quality };
 
 // ---- 화면 크기 ----
 function resize() {
@@ -80,11 +79,13 @@ canvas.addEventListener('click', () => {
   if (document.pointerLockElement !== canvas) requestLock();
 });
 
+let started = false;
 document.addEventListener('pointerlockchange', () => {
   const locked = document.pointerLockElement === canvas;
   player.setEnabled(locked);
   overlay.classList.toggle('hidden', locked);
-  if (!locked) overlayMsg.textContent = '화면을 클릭하면 시작해요';
+  if (locked) started = true;
+  else overlayMsg.textContent = started ? '일시정지 — 클릭하면 계속해요' : '화면을 클릭하면 시작해요';
 });
 
 document.addEventListener('pointerlockerror', () => {
@@ -93,24 +94,52 @@ document.addEventListener('pointerlockerror', () => {
 });
 
 // ---- HUD ----
-let lastHudText = '';
-function updateHud() {
-  hudMove.textContent = MODE_LABEL[player.moveMode];
-  hudMove.dataset.mode = player.moveMode;
+let lastMode = '', lastRoom = '', lastPos = '', minimapTimer = 0;
+function updateHud(dt) {
+  const mode = player.moveMode;
+  if (mode !== lastMode) {
+    hudMove.dataset.mode = mode;
+    lastMode = mode;
+  }
   const room = world.roomAt(player.x, player.z);
-  const text = `x ${player.x.toFixed(1)}  z ${player.z.toFixed(1)}  |  ${room ? room.name : '-'}`;
-  if (text !== lastHudText) {
-    hudPos.textContent = text;
-    lastHudText = text;
+  const name = room ? room.name : '-';
+  if (name !== lastRoom) {
+    roomName.textContent = name;
+    lastRoom = name;
+  }
+  const pos = `x ${player.x.toFixed(1)}  z ${player.z.toFixed(1)}  |  ${name}`;
+  if (pos !== lastPos) {
+    hudPos.textContent = pos;
+    lastPos = pos;
+  }
+  // 미니맵은 1초에 약 20번만 갱신
+  minimapTimer += dt;
+  if (minimap && minimapTimer > 0.05) {
+    minimap.update(player);
+    minimapTimer = 0;
   }
 }
 
 // ---- 그리기 반복 ----
 let last = performance.now();
+let fovShown = CONFIG.fov;
 renderer.setAnimationLoop((now) => {
-  const dt = Math.min((now - last) / 1000, CONFIG.maxDeltaTime);
+  const realDt = (now - last) / 1000;
   last = now;
+  const dt = Math.min(realDt, CONFIG.maxDeltaTime);
+
   player.update(dt);
-  updateHud();
+
+  // 달릴 때 시야각이 살짝 넓어지는 연출
+  const fov = CONFIG.fov + player.fovOffset;
+  if (Math.abs(fov - fovShown) > 0.02) {
+    camera.fov = fovShown = fov;
+    camera.updateProjectionMatrix();
+  }
+
+  updateHud(dt);
   renderer.render(scene, camera);
+
+  // 자동 해상도 조절 (탭을 오래 떠났다 돌아온 프레임은 제외)
+  if (realDt < 0.25 && quality.tick(realDt)) resize();
 });
