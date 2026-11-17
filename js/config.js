@@ -91,6 +91,7 @@ export const COLORS = {
   screen: 0x6f8fa8,
   stairs: 0xb4b1aa,
   stairsEdge: 0x8f8c85,
+  stairsBlock: 0xdcd9d1, // 계단 끝을 막은 벽
   rail: 0x565f68,
   plantPot: 0x8a8f94,
   plantLeaf: 0x4d7a4f,
@@ -119,6 +120,8 @@ export const WALL_STYLE = {
   study:     { upper: 0xe8e8e1, lower: 0xbcc4bb, lowerH: 1.0 },
   office:    { upper: 0xe9e8e3, lower: 0xc3c8ce, lowerH: 1.0 },
   stairs:    { upper: 0xe4e1d9, lower: 0xaeb2b6, lowerH: 1.0 },
+  lab:       { upper: 0xe9e8e2, lower: 0xc6cdc9, lowerH: 1.0 },
+  gym:       { upper: 0xe6e4dc, lower: 0x9fb0c2, lowerH: 1.4 },
   default:   { upper: 0xe6e4de, lower: 0xc3c1b9, lowerH: 1.0 },
 };
 
@@ -133,5 +136,7 @@ export const FLOOR_STYLE = {
   study:     { colors: [0xaeb3ad, 0xa6aba5], tile: 1.0 },
   office:    { colors: [0x8f959c, 0x878d94], tile: 1.0 },
   stairs:    { colors: [0xb5b3ad, 0xaaa8a2], tile: 1.5 },
+  lab:       { colors: [0xb9bdb6, 0xb0b4ad], tile: 1.0 },
+  gym:       { colors: [0xbfa57c], planks: 0.9 },
   default:   { colors: [0xc8c8c8], tile: 0 },
 };

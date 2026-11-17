@@ -7,6 +7,8 @@
 const KIND_COLOR = {
   corridor: '#cfcdc6',
   classroom: '#aab2b0',
+  lab: '#b0b6ad',
+  gym: '#c2b49a',
   restroom: '#a9b8be',
   study: '#b3b9ac',
   office: '#adb2ba',
@@ -17,7 +19,7 @@ const KIND_COLOR = {
 export function createMinimap(canvas, world) {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const pad = 6;
-  const maxW = 280, maxH = 170;
+  const maxW = 360, maxH = 170; // 건물이 가로로 길어서 가로를 넉넉히
   const b = world.bounds;
   const worldW = b.maxX - b.minX, worldH = b.maxZ - b.minZ;
   const scale = Math.min((maxW - pad * 2) / worldW, (maxH - pad * 2) / worldH); // 1m 가 몇 픽셀인지
@@ -53,6 +55,13 @@ export function createMinimap(canvas, world) {
     g.beginPath();
     if (d.horizontal) { g.moveTo(sx(d.center - h), sz(d.line)); g.lineTo(sx(d.center + h), sz(d.line)); }
     else { g.moveTo(sx(d.line), sz(d.center - h)); g.lineTo(sx(d.line), sz(d.center + h)); }
+    g.stroke();
+  }
+  // 문 없이 뚫린 통로(계단·외부연결·융합인재관 연결)도 같은 방식으로 터 줌
+  for (const o of world.openings || []) {
+    g.beginPath();
+    if (o.horizontal) { g.moveTo(sx(o.s), sz(o.line)); g.lineTo(sx(o.e), sz(o.line)); }
+    else { g.moveTo(sx(o.line), sz(o.s)); g.lineTo(sx(o.line), sz(o.e)); }
     g.stroke();
   }
 

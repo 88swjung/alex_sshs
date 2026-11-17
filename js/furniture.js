@@ -254,6 +254,61 @@ export const FURNITURE_TYPES = {
     },
   },
 
+  // 올라가는 계단 (몇 칸만 만들고 끝을 벽으로 막아 둠). face = 올라가는 사람이 바라보는 방향
+  //   steps 칸 × 높이 rise, 길이 d 중 끝쪽 block(m)은 천장까지 이어지는 막힌 벽
+  stairsUp: {
+    size: { w: 3, d: 3.6, steps: 8, rise: 0.17, block: 1.2, h: 3 },
+    tall: true,
+    build(c, o) {
+      const flight = o.d - o.block;
+      const run = flight / o.steps;
+      const depOf = (i) => o.d / 2 - (i + 0.5) * run; // 낮은 계단이 뒤쪽(출발), 높은 계단이 앞쪽
+      for (let i = 0; i < o.steps; i++) {
+        const h = (i + 1) * o.rise;
+        c.box(0, 0, depOf(i), o.w, h - 0.03, run, COLORS.stairsEdge);              // 계단 옆면(챙)
+        c.box(0, h - 0.03, depOf(i) + 0.02, o.w, 0.03, run + 0.04, COLORS.stairs); // 밟는 면
+      }
+      c.box(0, 0, -o.d / 2 + o.block / 2, o.w, o.h, o.block, COLORS.stairsBlock);   // 막힌 끝
+      // 난간: 기둥 + 경사진 손잡이
+      const total = o.steps * o.rise;
+      const slope = Math.atan2(total - o.rise, flight - run);
+      const len = Math.hypot(flight - run, total - o.rise);
+      for (const side of [-1, 1]) {
+        const lat = side * (o.w / 2 - 0.04);
+        for (let i = 0; i < o.steps; i += 3) c.box(lat, (i + 1) * o.rise, depOf(i), 0.04, 0.9, 0.04, COLORS.rail);
+        c.box(lat, (total + o.rise) / 2 + 0.9 - 0.025, o.d / 2 - flight / 2, 0.06, 0.05, len, COLORS.rail, ['lat', slope]);
+      }
+    },
+  },
+
+  // 내려가는 계단 (바닥을 비운 구덩이에 몇 칸만 만들고 끝을 벽으로 막아 둠). 입구에 난간
+  //   face = 내려가는 사람이 바라보는 방향
+  stairsDown: {
+    size: { w: 3.6, d: 3.6, steps: 8, rise: 0.17, block: 1.2, h: 3 },
+    shadow: false, // 바닥이 없는 자리라 가짜 그림자를 깔지 않음
+    build(c, o) {
+      const flight = o.d - o.block;
+      const run = flight / o.steps;
+      const depOf = (i) => o.d / 2 - (i + 0.5) * run; // 입구쪽이 높고(뒤쪽), 깊은 쪽이 앞쪽
+      const bottom = -(o.steps * o.rise + 0.25);
+      for (let i = 0; i < o.steps; i++) {
+        const top = -(i + 1) * o.rise;
+        c.box(0, bottom, depOf(i), o.w, top - bottom - 0.03, run, COLORS.stairsEdge);
+        c.box(0, top - 0.03, depOf(i) + 0.02, o.w, 0.03, run + 0.04, COLORS.stairs);
+      }
+      // 구덩이 옆면, 입구 쪽 면, 막힌 끝
+      for (const side of [-1, 1]) c.box(side * (o.w / 2 - 0.015), bottom, 0, 0.03, -bottom, o.d, COLORS.stairsEdge);
+      c.box(0, -o.rise, o.d / 2 - 0.02, o.w, o.rise, 0.04, COLORS.stairsEdge);
+      c.box(0, bottom, -o.d / 2 + o.block / 2, o.w, o.h - bottom, o.block, COLORS.stairsBlock);
+      // 입구 난간
+      const edge = o.d / 2 - 0.05;
+      c.box(0, 0.95, edge, o.w, 0.05, 0.05, COLORS.rail);
+      c.box(0, 0.5, edge, o.w, 0.03, 0.03, COLORS.rail);
+      const n = Math.max(2, Math.ceil(o.w / 1.0) + 1);
+      for (let k = 0; k < n; k++) c.box(-o.w / 2 + 0.04 + (k * (o.w - 0.08)) / (n - 1), 0, edge, 0.04, 0.95, 0.04, COLORS.rail);
+    },
+  },
+
   // ---------------- 장식품 (벽에 붙이는 것 포함) ----------------
   // 화분
   plant: {
@@ -433,9 +488,27 @@ export const LAYOUTS = {
     return items;
   },
 
-  // 앞쪽(front) 벽에 붙여 계단 한 줄. 위로 올라가는 쪽이 앞벽
-  stairs() {
-    return [{ type: 'stairs', a: 2.4, b: 1.1, face: 'front' }];
+  // room.stairs 가 있으면: 북쪽 벽에 붙여 서쪽→동쪽 순서로 올라가는/내려가는 계단을 나란히 놓음
+  //   (front 가 'S' 인 계단 방 기준: a 는 남쪽 벽에서 북쪽으로, b 는 서쪽에서 동쪽으로 잰 거리)
+  // room.stairs 가 없으면: 앞쪽(front) 벽에 붙여 계단 한 줄. 위로 올라가는 쪽이 앞벽
+  stairs(F, opt, room) {
+    if (!room.stairs) return [{ type: 'stairs', a: 2.4, b: 1.1, face: 'front' }];
+    const { depth, flights } = room.stairs;
+    const edge = (room.w - F.B) / 2; // 벽 두께 절반 + 페인트
+    const items = [];
+    let prev = 0;
+    flights.forEach((fl, i) => {
+      const lo = Math.max(prev, edge), hi = Math.min(fl.to, room.w - edge);
+      prev = fl.to;
+      items.push({
+        type: fl.kind === 'up' ? 'stairsUp' : 'stairsDown',
+        a: F.A - depth / 2,
+        b: (lo + hi) / 2 - edge,
+        face: 'back', // 북쪽(방 안쪽 끝)을 바라보며 오르내림
+        o: { w: hi - lo, d: depth },
+      });
+    });
+    return items;
   },
 
   corridor() {

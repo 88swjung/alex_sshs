@@ -195,7 +195,7 @@ function makeFrame(room, wallT, front) {
 // 4) 메인: 맵 데이터 → 3D 월드
 // ------------------------------------------------------------
 export function buildWorld(map) {
-  const def = { ceilingHeight: 3, wallThickness: 0.2, doorWidth: 1.0, doorHeight: 2.1, ...map.defaults };
+  const def = { ceilingHeight: 3, wallThickness: 0.2, doorWidth: 1.0, slidingDoorWidth: 1.2, doorHeight: 2.1, ...map.defaults };
   const H = def.ceilingHeight;
   const T = def.wallThickness;
 
@@ -219,7 +219,9 @@ export function buildWorld(map) {
   const doors = (map.doors || []).map((d) => {
     const room = roomById.get(d.room);
     if (!room) throw new Error(`문 ${d.id}: 방 '${d.room}' 이(가) 없습니다`);
-    const width = d.width ?? def.doorWidth;
+    const kind = d.kind || 'swing'; // 'swing' 여닫이 | 'sliding' 미닫이
+    if (kind !== 'swing' && kind !== 'sliding') throw new Error(`문 ${d.id}: 알 수 없는 문 종류 '${kind}' (swing | sliding)`);
+    const width = d.width ?? (kind === 'sliding' ? def.slidingDoorWidth : def.doorWidth);
     const height = d.height ?? def.doorHeight;
     const horizontal = d.wall === 'N' || d.wall === 'S'; // 벽이 동서 방향으로 뻗어 있는가
     const line = horizontal ? (d.wall === 'N' ? room.z : room.z + room.d) : d.wall === 'W' ? room.x : room.x + room.w;
@@ -227,6 +229,9 @@ export function buildWorld(map) {
     return {
       id: d.id,
       type: 'door',
+      kind,                    // 'swing' | 'sliding'
+      open: d.open ?? true,    // 목표 상태 (true = 열림). setDoorOpen 으로 바꿈
+      t: 0,                    // 열린 정도 0(닫힘) ~ 1(열림). 아래에서 open 에 맞춰 초기화
       room: d.room,
       wall: d.wall,
       width,
@@ -241,6 +246,27 @@ export function buildWorld(map) {
     };
   });
 
+  // 계단 방에서 점 (x, z) 가 "내려가는 계단 구덩이" 위인지
+  const overPit = (r, x, z) => {
+    if (z > r.z + r.stairs.depth + T / 2 + PAINT) return false;
+    let prev = 0;
+    for (const fl of r.stairs.flights) {
+      if (x >= r.x + prev && x <= r.x + fl.to) return fl.kind === 'down';
+      prev = fl.to;
+    }
+    return false;
+  };
+
+  // ---- 뚫린 통로 정보 (문 없이 벽을 터 둔 곳) ----
+  const openings = (map.openings || []).map((o) => {
+    const room = roomById.get(o.room);
+    if (!room) throw new Error(`통로 ${o.id}: 방 '${o.room}' 이(가) 없습니다`);
+    const horizontal = o.wall === 'N' || o.wall === 'S';
+    const line = horizontal ? (o.wall === 'N' ? room.z : room.z + room.d) : o.wall === 'W' ? room.x : room.x + room.w;
+    const base = horizontal ? room.x : room.z;
+    return { id: o.id, room: o.room, wall: o.wall, horizontal, line, s: base + o.from, e: base + o.to };
+  });
+
   // ---- 바닥 · 천장 · 천장 조명 ----
   for (const r of rooms) {
     if (r.kind === 'solid') continue; // 막힌 공간은 안에 들어갈 수 없으니 바닥·천장·조명 없음
@@ -248,30 +274,48 @@ export function buildWorld(map) {
     const cx = r.x + r.w / 2, cz = r.z + r.d / 2;
     const rng = makeRng(hashStr('floor-' + r.id));
 
-    if (style.tile > 0) {
-      // 두 색 타일을 번갈아 깔기
-      let ix = 0;
-      for (let x = 0; x < r.w - EPS; x += style.tile, ix++) {
-        let iz = 0;
-        for (let z = 0; z < r.d - EPS; z += style.tile, iz++) {
-          const sx = Math.min(style.tile, r.w - x), sz = Math.min(style.tile, r.d - z);
-          batch.add(r.x + x + sx / 2, -0.05, r.z + z + sz / 2, sx, 0.1, sz, style.colors[(ix + iz) % 2]);
+    // 바닥 한 구역(fx, fz, fw, fd)을 방 스타일대로 깐다
+    const floorRect = (fx, fz, fw, fd) => {
+      if (fw < EPS || fd < EPS) return;
+      const fcx = fx + fw / 2, fcz = fz + fd / 2;
+      if (style.tile > 0) {
+        // 두 색 타일을 번갈아 깔기
+        let ix = 0;
+        for (let x = 0; x < fw - EPS; x += style.tile, ix++) {
+          let iz = 0;
+          for (let z = 0; z < fd - EPS; z += style.tile, iz++) {
+            const sx = Math.min(style.tile, fw - x), sz = Math.min(style.tile, fd - z);
+            batch.add(fx + x + sx / 2, -0.05, fz + z + sz / 2, sx, 0.1, sz, style.colors[(ix + iz) % 2]);
+          }
         }
+      } else if (style.planks > 0) {
+        // 긴 쪽 방향으로 널빤지를 깔고, 널빤지마다 밝기를 조금씩 다르게
+        const alongX = fw >= fd;
+        const across = alongX ? fd : fw;
+        const n = Math.ceil(across / style.planks - EPS);
+        const base = new THREE.Color(style.colors[0]);
+        for (let i = 0; i < n; i++) {
+          const lo = i * style.planks, wd = Math.min(style.planks, across - lo);
+          const col = base.clone().offsetHSL(0, (rng() - 0.5) * 0.04, (rng() - 0.5) * 0.07).getHex();
+          if (alongX) batch.add(fcx, -0.05, fz + lo + wd / 2, fw, 0.1, wd, col);
+          else batch.add(fx + lo + wd / 2, -0.05, fcz, wd, 0.1, fd, col);
+        }
+      } else {
+        batch.add(fcx, -0.05, fcz, fw, 0.1, fd, style.colors[0]);
       }
-    } else if (style.planks > 0) {
-      // 긴 쪽 방향으로 널빤지를 깔고, 널빤지마다 밝기를 조금씩 다르게
-      const alongX = r.w >= r.d;
-      const across = alongX ? r.d : r.w;
-      const n = Math.ceil(across / style.planks - EPS);
-      const base = new THREE.Color(style.colors[0]);
-      for (let i = 0; i < n; i++) {
-        const lo = i * style.planks, wd = Math.min(style.planks, across - lo);
-        const col = base.clone().offsetHSL(0, (rng() - 0.5) * 0.04, (rng() - 0.5) * 0.07).getHex();
-        if (alongX) batch.add(cx, -0.05, r.z + lo + wd / 2, r.w, 0.1, wd, col);
-        else batch.add(r.x + lo + wd / 2, -0.05, cz, wd, 0.1, r.d, col);
+    };
+
+    if (r.stairs) {
+      // 계단 방: 내려가는 계단 자리는 바닥을 비워 둠 (구덩이 안에 계단이 놓임)
+      const pitD = r.stairs.depth + T / 2 + PAINT; // 북쪽 벽 중심선에서 계단 끝까지
+      floorRect(r.x, r.z + pitD, r.w, r.d - pitD);
+      let prev = 0;
+      for (const fl of r.stairs.flights) {
+        if (fl.kind !== 'down') floorRect(r.x + prev, r.z, fl.to - prev, pitD);
+        prev = fl.to;
       }
     } else {
-      batch.add(cx, -0.05, cz, r.w, 0.1, r.d, style.colors[0]);
+      floorRect(r.x, r.z, r.w, r.d);
     }
 
     batch.add(cx, H + 0.05, cz, r.w, 0.1, r.d, COLORS.ceiling);
@@ -284,6 +328,7 @@ export function buildWorld(map) {
         const lx = r.x + (i + 0.5) * cw, lz = r.z + (j + 0.5) * cd;
         batch.add(lx, H - 0.02, lz, 1.3, 0.04, 0.5, COLORS.lightHousing);
         glow.add(lx, H - 0.045, lz, 1.12, 0.01, 0.34, COLORS.lightGlow);
+        if (r.stairs && overPit(r, lx, lz)) continue; // 내려가는 계단 구덩이 위에는 바닥 빛 얼룩 없음
         glowDecal.add(lx, lz, Math.min(cw * 0.95, 3.6), Math.min(cd * 0.95, 3.6), scaled(0xf4f7ff, 0.08));
       }
     }
@@ -317,6 +362,11 @@ export function buildWorld(map) {
       const inWall = segs.some(([a, b]) => s >= a - EPS && e <= b + EPS);
       if (!inWall) console.warn(`[mapBuilder] 문 '${d.id}' 이(가) 벽 위에 있지 않습니다. pos 값을 확인하세요.`);
       segs = subtractInterval(segs, s, e);
+    }
+    // 문 없이 터 둔 곳
+    for (const o of openings) {
+      if (o.horizontal !== ln.horizontal || Math.abs(o.line - ln.coord) > 1e-3) continue;
+      segs = subtractInterval(segs, o.s, o.e);
     }
 
     const breaks = ln.horizontal ? xBreaks : zBreaks;
@@ -367,7 +417,8 @@ export function buildWorld(map) {
     panel(0, 0.11, 0, 0.04, COLORS.baseboard);             // 걸레받이
     panel(H - 0.07, 0.07, 0, 0.04, COLORS.trim);           // 천장 몰딩
 
-    // 벽 아래쪽 그늘 (바닥에 깔리는 반투명 띠)
+    // 벽 아래쪽 그늘 (바닥에 깔리는 반투명 띠). 계단 방은 구덩이 위에 뜨지 않게 생략
+    if (f.room.stairs) continue;
     const depth = 0.8;
     const c = T / 2 + depth / 2;
     if (f.horizontal) shadowWall.add(mid, f.coord + f.side * c, len, depth, 0xffffff, f.side > 0 ? 0 : Math.PI);
@@ -397,6 +448,110 @@ export function buildWorld(map) {
     place(d.center, d.width + 0.12, d.height, 0.06, T + 0.06, COLORS.doorFrame);  // 문틀 윗부분
     place(s - 0.03, 0.06, 0, d.height, T + 0.06, COLORS.doorFrame);               // 문틀 왼쪽
     place(e + 0.03, 0.06, 0, d.height, T + 0.06, COLORS.doorFrame);               // 문틀 오른쪽
+  }
+
+  // ---- 문짝: 여닫이(swing)는 경첩을 중심으로 방 안쪽으로 돌고, 미닫이(sliding)는 벽을 따라 옆으로 밀림 ----
+  // 문짝·손잡이 상자를 한 덩어리 InstancedMesh 로 묶고, 열고 닫을 때만 행렬을 갱신한다.
+  const LEAF_T = 0.04;
+  const SWING_OPEN = 1.65; // 여닫이 문이 완전히 열렸을 때의 각도(약 95°)
+  const doorMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), materials.lit, Math.max(1, doors.length * 2));
+  doorMesh.name = 'door-leaves';
+  doorMesh.frustumCulled = false; // 문이 움직여도 컬링 범위가 틀어지지 않게
+  const doorColliders = new Map(); // 닫혀 있는 문의 충돌 상자
+  {
+    const col = new THREE.Color();
+    doors.forEach((d, i) => {
+      doorMesh.setColorAt(i * 2, col.set(d.kind === 'sliding' ? 0xb9bfc4 : 0x8a7358)); // 문짝
+      doorMesh.setColorAt(i * 2 + 1, col.set(COLORS.metal));                            // 손잡이
+    });
+  }
+  const dm = new THREE.Matrix4(), dq = new THREE.Quaternion(), dp = new THREE.Vector3(), ds = new THREE.Vector3();
+  const yAxis = new THREE.Vector3(0, 1, 0);
+
+  /** 문의 열린 정도(d.t)에 맞춰 문짝 위치·각도를 계산해 인스턴스 행렬에 기록 */
+  function poseDoor(d, index) {
+    const lw = d.width - 0.02, lh = d.height - 0.01;
+    const a = d.horizontal ? [1, 0] : [0, 1];              // 벽을 따라가는 방향 (x, z)
+    const inward = SIDE_VEC[OPPOSITE[d.wall]];             // 방 안쪽
+    const t = d.t;
+    let cx, cz, phi, handleX;
+    if (d.kind === 'swing') {
+      const hinge = d.center - d.width / 2 + 0.01;          // 경첩: 문 시작쪽 문틀
+      const hx = d.horizontal ? hinge : d.line, hz = d.horizontal ? d.line : hinge;
+      const ang = t * SWING_OPEN;
+      const dx = Math.cos(ang) * a[0] + Math.sin(ang) * inward[0];
+      const dz = Math.cos(ang) * a[1] + Math.sin(ang) * inward[1];
+      cx = hx + dx * lw / 2;
+      cz = hz + dz * lw / 2;
+      phi = Math.atan2(-dz, dx);
+      handleX = lw / 2 - 0.12;
+    } else {
+      const off = Math.min(1, t * 4) * (T / 2 + 0.07);      // 먼저 방 안쪽 레일 쪽으로 살짝 나온 뒤
+      const shift = t * (lw + 0.05);                         // 벽을 따라 옆으로 밀림
+      cx = d.horizontal ? d.center + shift : d.line + inward[0] * off;
+      cz = d.horizontal ? d.line + inward[1] * off : d.center + shift;
+      phi = d.horizontal ? 0 : -Math.PI / 2;
+      handleX = -lw / 2 + 0.12;
+    }
+    dq.setFromAxisAngle(yAxis, phi);
+    dm.compose(dp.set(cx, lh / 2 + 0.005, cz), dq, ds.set(lw, lh, LEAF_T));
+    doorMesh.setMatrixAt(index * 2, dm);
+    dm.compose(dp.set(cx + handleX * Math.cos(phi), 1.0, cz - handleX * Math.sin(phi)), dq, ds.set(0.12, 0.05, LEAF_T + 0.07));
+    doorMesh.setMatrixAt(index * 2 + 1, dm);
+  }
+
+  function syncDoorCollider(d) {
+    const has = doorColliders.has(d.id);
+    if (d.open && has) {
+      colliders.splice(colliders.indexOf(doorColliders.get(d.id)), 1);
+      doorColliders.delete(d.id);
+    } else if (!d.open && !has) {
+      const s = d.center - d.width / 2, e = d.center + d.width / 2;
+      const box = d.horizontal
+        ? { minX: s, maxX: e, minZ: d.line - T / 2, maxZ: d.line + T / 2, kind: 'door', id: d.id }
+        : { minX: d.line - T / 2, maxX: d.line + T / 2, minZ: s, maxZ: e, kind: 'door', id: d.id };
+      colliders.push(box);
+      doorColliders.set(d.id, box);
+    }
+  }
+
+  doors.forEach((d, i) => {
+    d.t = d.open ? 1 : 0;
+    poseDoor(d, i);
+    syncDoorCollider(d);
+  });
+  doorMesh.instanceMatrix.needsUpdate = true;
+  if (doorMesh.instanceColor) doorMesh.instanceColor.needsUpdate = true;
+  group.add(doorMesh);
+
+  const doorById = new Map(doors.map((d) => [d.id, d]));
+
+  /** 문 열기/닫기. 닫으면 바로 지나갈 수 없게 되고, 문짝은 부드럽게 움직임. 문이 없으면 false */
+  function setDoorOpen(id, open) {
+    const d = doorById.get(id);
+    if (!d) return false;
+    d.open = !!open;
+    syncDoorCollider(d);
+    return true;
+  }
+
+  function toggleDoor(id) {
+    const d = doorById.get(id);
+    return d ? setDoorOpen(id, !d.open) : false;
+  }
+
+  /** 매 프레임: 문짝 애니메이션 진행 (움직이는 문이 없으면 아무것도 안 함) */
+  function updateDoors(dt) {
+    let moved = false;
+    doors.forEach((d, i) => {
+      const target = d.open ? 1 : 0;
+      if (d.t === target) return;
+      const step = dt / (d.kind === 'sliding' ? 0.6 : 0.5);
+      d.t = target > d.t ? Math.min(target, d.t + step) : Math.max(target, d.t - step);
+      poseDoor(d, i);
+      moved = true;
+    });
+    if (moved) doorMesh.instanceMatrix.needsUpdate = true;
   }
 
   // ---- 가구 ----
@@ -565,6 +720,10 @@ export function buildWorld(map) {
     colliders,
     rooms,
     doors,
+    openings,
+    setDoorOpen,
+    toggleDoor,
+    update: updateDoors,
     furniture,
     roomAt,
     bounds,

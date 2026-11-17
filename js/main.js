@@ -127,6 +127,7 @@ renderer.setAnimationLoop((now) => {
   const dt = Math.min(realDt, CONFIG.maxDeltaTime);
 
   player.update(dt);
+  world.update(dt); // 문 열고 닫는 애니메이션
 
   // 달릴 때 시야각이 살짝 넓어지는 연출
   const fov = CONFIG.fov + player.fovOffset;

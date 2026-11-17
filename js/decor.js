@@ -62,6 +62,7 @@ export function addWindows(B, faces) {
 
   for (const face of faces) {
     if (!face.room || face.other) continue; // 바깥에 면한 벽만
+    if (face.room.stairs) continue;         // 계단 끝은 벽으로 막혀 있어서 창문을 달아도 안 보임
     const lo = face.s + 0.55, hi = face.e - 0.55;
     if (hi - lo < 1.9) continue;
     const n = Math.max(1, Math.floor((hi - lo) / 2.7));
@@ -121,7 +122,7 @@ const DECOR_WIDTH = { corkboard: 1.7, poster: 0.7, extinguisher: 0.4 };
 
 export function addWallDecor(B, faces, windowed) {
   for (const face of faces) {
-    if (!face.room || windowed.has(face)) continue;
+    if (!face.room || windowed.has(face) || face.room.decor === false) continue; // decor: false 인 빈 방은 장식 없음
     const kinds = WALL_DECOR[face.room.kind];
     if (!kinds) continue;
 
